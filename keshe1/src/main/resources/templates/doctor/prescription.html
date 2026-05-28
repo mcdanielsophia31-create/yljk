@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>开具处方 - 医疗健康管理系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            background-color: #f8f9fa;
+        }
+
+        .header-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .medicine-card {
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            cursor: pointer;
+        }
+
+        .medicine-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            border-color: #667eea;
+        }
+
+        .selected-medicine {
+            background-color: #e3f2fd;
+            border-color: #2196f3 !important;
+        }
+
+        .badge-prescription {
+            background: linear-gradient(45deg, #ff9a9e 0%, #fad0c4 100%);
+            color: white;
+        }
+
+        .prescription-item {
+            padding: 15px;
+            margin-bottom: 10px;
+            background: white;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .frequency-badge {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .quantity-badge {
+            background-color: #fff3e0;
+            color: #ef6c00;
+        }
+
+        .medicine-list-container {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .search-box {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: white;
+            padding: 15px 0;
+        }
+
+        .back-btn {
+            background: linear-gradient(135deg, #36B37E, #00A3BF);
+            border: none;
+            color: white;
+        }
+
+        .back-btn:hover {
+            background: linear-gradient(135deg, #2e9c6b, #0089a3);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+<div class="container-fluid py-4">
+    <!-- 头部信息 -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="header-card p-4">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h2><i class="fas fa-prescription-bottle-alt me-2"></i>开具处方</h2>
+                        <p class="mb-0">病历ID: <span id="recordId" th:text="${recordId}"></span></p>
+                    </div>
+                    <div>
+                        <button class="btn btn-light" onclick="window.close()">
+                            <i class="fas fa-times me-2"></i>关闭
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- 药品列表区域 -->
+        <div class="col-md-8">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white border-bottom-0">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-pills me-2"></i>药品目录</h5>
+                        <div class="input-group input-group-sm" style="width: 300px;">
+                            <input type="text" class="form-control" placeholder="搜索药品名称、通用名或生产厂家..."
+                                   id="medicineSearch" onkeyup="searchMedicines()">
+                            <button class="btn btn-outline-secondary" type="button" onclick="searchMedicines()">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="search-box px-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <small class="text-muted" id="medicineCount">共加载 0 种药品</small>
+                            <small class="text-muted">点击药品卡片可添加到处方</small>
+                        </div>
+                    </div>
+
+                    <div class="medicine-list-container px-3 pb-3">
+                        <div class="row g-3" id="medicineList">
+                            <!-- 药品卡片将通过JS动态加载 -->
+                        </div>
+
+                        <div class="text-center py-5" id="loadingIndicator">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">加载中...</span>
+                            </div>
+                            <p class="mt-2 text-muted">正在加载药品数据...</p>
+                        </div>
+
+                        <div class="alert alert-warning d-none" id="noMedicinesAlert">
+                            <i class="fas fa-exclamation-triangle me-2"></i>暂无药品数据
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 处方区域 -->
+        <div class="col-md-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white border-bottom-0">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-clipboard-list me-2"></i>处方内容</h5>
+                        <span class="badge bg-primary rounded-pill" id="prescriptionCount">0 项</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info" id="emptyPrescriptionAlert">
+                        <i class="fas fa-info-circle me-2"></i>当前处方为空，请从左侧选择药品
+                    </div>
+
+                    <div id="prescriptionItems">
+                        <!-- 处方项将通过JS动态生成 -->
+                    </div>
+
+                    <div class="mt-4">
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-success btn-lg" onclick="savePrescription()" id="saveBtn" disabled>
+                                <i class="fas fa-save me-2"></i>保存处方
+                            </button>
+                            <button class="btn btn-outline-secondary" onclick="clearPrescription()">
+                                <i class="fas fa-trash-alt me-2"></i>清空处方
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 添加药品模态框 -->
+<div class="modal fade" id="addMedicineModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalMedicineName">添加药品</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="medicineForm">
+                    <input type="hidden" id="modalMedicineId">
+                    <div class="mb-3">
+                        <label class="form-label">药品信息</label>
+                        <div class="form-control bg-light" id="medicineInfo">
+                            <!-- 药品信息将通过JS填充 -->
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="frequency" class="form-label">服用频率</label>
+                        <select class="form-select" id="frequency" required>
+                            <option value="">请选择频率</option>
+                            <option value="一天一次">一天一次</option>
+                            <option value="一天两次">一天两次</option>
+                            <option value="一天三次">一天三次</option>
+                            <option value="睡前服用">睡前服用</option>
+                            <option value="晨起服用">晨起服用</option>
+                            <option value="需要时服用">需要时服用</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">每次服用数量</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" id="quantity" min="1" max="100" value="1" required>
+                            <span class="input-group-text" id="dosageUnitDisplay">单位</span>
+                        </div>
+                        <small class="text-muted">请输入1-100之间的数字</small>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">开药数量 (盒)</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="totalQuantity" min="1" max="100" value="1" placeholder="1-100">
+                                <span class="input-group-text">盒</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">服用天数</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="days" min="1" max="100" value="1" placeholder="1-100">
+                                <span class="input-group-text">天</span>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="addToPrescription()">添加到处方</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 隐藏字段用于传递Thymeleaf数据 -->
+<input type="hidden" id="currentTreatmentPlanData" th:value="${currentTreatmentPlan}" />
+
+<!-- 引入Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script th:inline="javascript">
+    const recordId = /*[[${recordId}]]*/ 0;
+    // 全局变量
+    let allMedicines = [];
+    let prescriptionItems = [];
+    let currentRecordId = document.getElementById('recordId').textContent;
+
+    // 页面加载完成后执行
+    document.addEventListener('DOMContentLoaded', function() {
+        // 先加载药品，完成后加载处方
+        loadMedicines().then(() => {
+            loadExistingPrescriptions();
+
+            // 页面加载后立即启用保存按钮（允许保存空处方）
+            const saveBtn = document.getElementById('saveBtn');
+            saveBtn.disabled = false;
+        });
+    });
+
+    // 加载药品列表
+    function loadMedicines() {
+        console.log('开始加载药品数据...');
+
+        return fetch('/doctor/api/medicines/search')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('网络响应异常: ' + response.status);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('药品数据加载成功:', data);
+                allMedicines = data;
+                renderMedicineList(data);
+
+                // 隐藏加载指示器
+                document.getElementById('loadingIndicator').style.display = 'none';
+                document.getElementById('medicineCount').textContent = `共加载 ${data.length} 种药品`;
+
+                if (data.length === 0) {
+                    document.getElementById('noMedicinesAlert').classList.remove('d-none');
+                }
+            })
+            .catch(error => {
+                console.error('加载药品失败:', error);
+                document.getElementById('loadingIndicator').innerHTML =
+                    '<p class="text-danger"><i class="fas fa-exclamation-triangle me-2"></i>加载药品失败: ' + error.message + '</p>';
+            });
+    }
+
+    // 加载已有的处方详情
+    function loadExistingPrescriptions() {
+        if (!recordId) {
+            console.error("未找到 recordId，无法加载处方");
+            return;
+        }
+
+        console.log("正在加载处方数据，recordId:", recordId);
+
+        // 调用后端接口
+        fetch(`/doctor/api/prescription-list/${recordId}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('网络响应异常: ' + response.status);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data && data.length > 0) {
+                    console.log("成功加载到处方:", data);
+
+                    // 关键修改：将处方数据赋值给正确的全局变量 prescriptionItems
+                    // 映射数据结构，确保与前端期望的格式一致
+                    prescriptionItems = data.map(item => ({
+                        medicineId: item.medicineId,
+                        medicineName: item.medicineName,
+                        genericName: item.genericName || '',
+                        specification: item.specification || '',
+                        dosageUnit: item.dosageUnit || '',
+                        frequency: item.frequency || '一天一次',
+                        quantity: item.quantity || 1,
+                        dosageForm: item.dosageForm || ''
+                    }));
+
+                    console.log("转换后的处方数据:", prescriptionItems);
+
+                    // 渲染处方列表
+                    renderPrescription();
+
+                    // 更新药品列表的选中状态
+                    renderMedicineList(allMedicines);
+                } else {
+                    console.log("没有找到处方数据");
+                    // 仍然需要渲染空处方
+                    renderPrescription();
+                }
+            })
+            .catch(error => {
+                console.error("加载处方出错:", error);
+                // 即使出错也要渲染处方（空状态）
+                renderPrescription();
+            });
+    }
+
+    // 搜索药品
+    function searchMedicines() {
+        const keyword = document.getElementById('medicineSearch').value.trim();
+
+        if (keyword === '') {
+            renderMedicineList(allMedicines);
+            return;
+        }
+
+        fetch(`/doctor/api/medicines/search?keyword=${encodeURIComponent(keyword)}`)
+            .then(response => response.json())
+            .then(data => {
+                renderMedicineList(data);
+            })
+            .catch(error => {
+                console.error('搜索药品失败:', error);
+            });
+    }
+
+    // 渲染药品列表
+    function renderMedicineList(medicines) {
+        const container = document.getElementById('medicineList');
+        if (!container) return;
+
+        container.innerHTML = '';
+
+        medicines.forEach(medicine => {
+            // 检查该药品是否已经在处方中
+            const isSelected = prescriptionItems.some(item => item.medicineId === medicine.id);
+
+            const medicineCard = `
+            <div class="col-md-6 col-lg-4">
+                <div class="card medicine-card ${isSelected ? 'selected-medicine' : ''}"
+                     onclick="showAddMedicineModal(${medicine.id})">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h6 class="card-title mb-0 text-primary">${escapeHtml(medicine.name)}</h6>
+                            ${isSelected ? '<span class="badge badge-prescription">已添加</span>' : ''}
+                        </div>
+                        <p class="card-text small text-muted mb-1">
+                            <i class="fas fa-tag me-1"></i>${escapeHtml(medicine.genericName || '无通用名')}
+                        </p>
+                        <p class="card-text small text-muted mb-1">
+                            <i class="fas fa-flask me-1"></i>${escapeHtml(medicine.specification || '无规格')}
+                        </p>
+                        <p class="card-text small text-muted mb-1">
+                            <i class="fas fa-industry me-1"></i>${escapeHtml(medicine.manufacturer || '未知厂家')}
+                        </p>
+                        <div class="d-flex justify-content-between align-items-center mt-2">
+                            <small class="text-success">
+                                <i class="fas fa-box me-1"></i>库存: ${medicine.stockQuantity || 0}${medicine.stockUnit || ''}
+                            </small>
+                            <small class="text-danger fw-bold">
+                                ¥${medicine.price ? parseFloat(medicine.price).toFixed(2) : '0.00'}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+            container.insertAdjacentHTML('beforeend', medicineCard);
+        });
+
+        // 更新药品数量显示
+        document.getElementById('medicineCount').textContent = `共加载 ${medicines.length} 种药品`;
+    }
+
+    // 显示添加药品模态框
+    function showAddMedicineModal(medicineId) {
+        const medicine = allMedicines.find(m => m.id === medicineId);
+        if (!medicine) return;
+
+        // 检查是否已在处方中
+        const existingItem = prescriptionItems.find(item => item.medicineId === medicineId);
+
+        // 填充模态框信息
+        document.getElementById('modalMedicineId').value = medicine.id;
+        document.getElementById('modalMedicineName').textContent = existingItem
+            ? `编辑处方项: ${medicine.name}`
+            : `添加药品: ${medicine.name}`;
+
+        const medicineInfo = `
+        <div>
+            <strong>${escapeHtml(medicine.name)}</strong> (${escapeHtml(medicine.genericName || '无通用名')})
+            <br>
+            <small class="text-muted">
+                规格: ${escapeHtml(medicine.specification || '无')} |
+                剂型: ${escapeHtml(medicine.dosageForm || '无')} |
+                单位: <span id="unitSpan">${escapeHtml(medicine.dosageUnit || '')}</span>
+            </small>
+        </div>
+    `;
+        document.getElementById('medicineInfo').innerHTML = medicineInfo;
+        document.getElementById('dosageUnitDisplay').textContent = medicine.dosageUnit || '';
+
+        // 如果已存在，填充现有数据
+        if (existingItem) {
+            document.getElementById('frequency').value = existingItem.frequency || '';
+            document.getElementById('quantity').value = existingItem.quantity || '1';
+            document.getElementById('totalQuantity').value = existingItem.totalQuantity || '1';
+            document.getElementById('days').value = existingItem.days || '1';
+        } else {
+            // 重置表单
+            document.getElementById('frequency').value = '';
+            document.getElementById('quantity').value = '1';
+            document.getElementById('totalQuantity').value = '1';
+            document.getElementById('days').value = '1';
+        }
+
+        // 显示模态框
+        const modal = new bootstrap.Modal(document.getElementById('addMedicineModal'));
+        modal.show();
+    }
+
+    // 添加到处方
+    function addToPrescription() {
+        const medicineId = parseInt(document.getElementById('modalMedicineId').value);
+        const frequency = document.getElementById('frequency').value;
+        const quantity = parseInt(document.getElementById('quantity').value);
+        const totalQuantity = parseInt(document.getElementById('totalQuantity').value);
+        const days = parseInt(document.getElementById('days').value);
+
+        // 验证输入
+        if (!frequency) {
+            alert('请选择服用频率');
+            return;
+        }
+
+        if (!quantity || quantity < 1 || quantity > 100) {
+            alert('请输入有效的每次服用数量（1-100）');
+            return;
+        }
+
+        if (!totalQuantity || totalQuantity < 1 || totalQuantity > 100) {
+            alert('请输入有效的开药数量（1-100盒）');
+            return;
+        }
+
+        if (!days || days < 1 || days > 100) {
+            alert('请输入有效的服用天数（1-100天）');
+            return;
+        }
+
+        const medicine = allMedicines.find(m => m.id === medicineId);
+        if (!medicine) return;
+
+        // 创建处方项（包含所有必要字段）
+        const prescriptionItem = {
+            medicineId: medicine.id,
+            medicineName: medicine.name,
+            genericName: medicine.genericName || '',
+            specification: medicine.specification || '',
+            dosageUnit: medicine.dosageUnit || '',
+            frequency: frequency,
+            quantity: quantity,
+            totalQuantity: totalQuantity,  // 关键字段
+            days: days,
+            dosageForm: medicine.dosageForm || '',
+            price: medicine.price || 0,
+            usage: ''  // 如果有用法字段，可以添加
+        };
+
+        // 检查是否已存在
+        const existingIndex = prescriptionItems.findIndex(item => item.medicineId === medicineId);
+        if (existingIndex > -1) {
+            // 更新现有项
+            prescriptionItems[existingIndex] = prescriptionItem;
+        } else {
+            // 添加新项
+            prescriptionItems.push(prescriptionItem);
+        }
+
+        // 更新显示
+        renderPrescription();
+
+        // 关闭模态框
+        const modalElement = document.getElementById('addMedicineModal');
+        const modalInstance = bootstrap.Modal.getInstance(modalElement);
+        if (modalInstance) {
+            modalInstance.hide();
+        }
+
+        // 重置表单
+        document.getElementById('medicineForm').reset();
+        document.getElementById('totalQuantity').value = 1;
+        document.getElementById('days').value = 1;
+    }
+
+    // 渲染处方
+    function renderPrescription() {
+        const container = document.getElementById('prescriptionItems');
+        const emptyAlert = document.getElementById('emptyPrescriptionAlert');
+        const saveBtn = document.getElementById('saveBtn');
+        const countBadge = document.getElementById('prescriptionCount');
+
+        if (prescriptionItems.length === 0) {
+            container.innerHTML = '';
+            emptyAlert.classList.remove('d-none');
+            // 修改这里：清空处方后仍然允许保存
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fas fa-save me-2"></i>保存空处方';
+            countBadge.textContent = '0 项';
+            return;
+        }
+
+        emptyAlert.classList.add('d-none');
+        saveBtn.disabled = false;
+        // 恢复保存按钮文本
+        saveBtn.innerHTML = '<i class="fas fa-save me-2"></i>保存处方';
+        countBadge.textContent = `${prescriptionItems.length} 项`;
+
+        let html = '';
+        prescriptionItems.forEach((item, index) => {
+            // 构建显示文本
+            const quantityText = item.quantity ? `每次 ${escapeHtml(item.quantity)}${escapeHtml(item.dosageUnit || '')}` : '';
+            const totalQuantityText = item.totalQuantity ? `共 ${escapeHtml(item.totalQuantity)} 盒` : '';
+            const daysText = item.days ? `服用 ${escapeHtml(item.days)} 天` : '';
+
+            html += `
+        <div class="prescription-item">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <div>
+                    <h6 class="mb-1 text-primary">${escapeHtml(item.medicineName)}</h6>
+                    <small class="text-muted">${escapeHtml(item.genericName || '')} | ${escapeHtml(item.specification || '')}</small>
+                </div>
+                <button class="btn btn-sm btn-outline-danger" onclick="removeFromPrescription(${item.medicineId})">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+            <div class="d-flex gap-2 flex-wrap">
+                <span class="badge frequency-badge">
+                    <i class="fas fa-clock me-1"></i>${escapeHtml(item.frequency)}
+                </span>
+                ${quantityText ? `<span class="badge quantity-badge"><i class="fas fa-hashtag me-1"></i>${quantityText}</span>` : ''}
+                ${totalQuantityText ? `<span class="badge bg-info text-white"><i class="fas fa-box me-1"></i>${totalQuantityText}</span>` : ''}
+                ${daysText ? `<span class="badge bg-warning text-dark"><i class="fas fa-calendar-alt me-1"></i>${daysText}</span>` : ''}
+                <small class="text-muted ms-auto">
+                    <i class="fas fa-pills me-1"></i>${escapeHtml(item.dosageForm || '')}
+                </small>
+            </div>
+            <div class="mt-2 small">
+                <span class="text-muted">药品ID: ${escapeHtml(item.medicineId)}</span>
+            </div>
+        </div>
+    `;
+        });
+
+        container.innerHTML = html;
+
+        // 更新药品列表的选中状态
+        renderMedicineList(allMedicines);
+    }
+
+    // 从处方中移除药品
+    function removeFromPrescription(medicineId) {
+        prescriptionItems = prescriptionItems.filter(item => item.medicineId !== medicineId);
+        renderPrescription();
+    }
+
+    // 清空处方
+    function clearPrescription() {
+        if (prescriptionItems.length === 0) return;
+
+        if (confirm('确定要清空所有处方项吗？')) {
+            prescriptionItems = [];
+            renderPrescription();
+        }
+    }
+
+    // 加载已有的处方
+    function loadExistingPrescription() {
+        // 从隐藏字段获取值
+        const currentTreatmentPlan = document.getElementById('currentTreatmentPlanData').value;
+
+        console.log('当前治疗方案:', currentTreatmentPlan);
+
+        if (currentTreatmentPlan && currentTreatmentPlan.trim() !== '') {
+            try {
+                // 尝试解析JSON格式的处方
+                const parsed = JSON.parse(currentTreatmentPlan);
+                if (Array.isArray(parsed)) {
+                    prescriptionItems = parsed;
+                    renderPrescription();
+                    console.log('成功加载已有处方:', prescriptionItems);
+                }
+            } catch (e) {
+                // 如果不是JSON格式，则忽略（可能是文本格式）
+                console.log('当前治疗方案不是JSON格式，无法自动加载处方项:', e.message);
+            }
+        }
+    }
+
+    // 保存处方
+    function savePrescription() {
+        // 即使处方为空也允许保存
+        if (prescriptionItems.length === 0) {
+            if (!confirm('处方为空，确定要保存空处方吗？')) {
+                return;
+            }
+        }
+
+        // 构建符合 PrescriptionItemDTO 结构的数组
+        const prescriptionList = prescriptionItems.map(item => {
+            return {
+                medicineId: item.medicineId,
+                medicineName: item.medicineName,
+                genericName: item.genericName || '',
+                specification: item.specification || '',
+                dosageUnit: item.dosageUnit || '',
+                frequency: item.frequency || '一天一次',
+                quantity: item.quantity || 1,
+                totalQuantity: item.totalQuantity || item.quantity || 1,
+                days: item.days || 1,
+                dosageForm: item.dosageForm || '',
+                usage: item.usage || '',
+                price: item.price || 0
+            };
+        });
+
+        // 注意：即使是空数组，也要序列化为 JSON 字符串 "[]"
+        const prescriptionJson = JSON.stringify(prescriptionList);
+        console.log('准备保存处方JSON:', prescriptionJson);
+        console.log('处方项数量:', prescriptionItems.length);
+
+        // 显示加载状态
+        const saveBtn = document.getElementById('saveBtn');
+        const originalText = saveBtn.innerHTML;
+        saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>保存中...';
+        saveBtn.disabled = true;
+
+        // 准备 FormData
+        const formData = new FormData();
+        formData.append('recordId', currentRecordId);
+        formData.append('treatmentPlanJson', prescriptionJson);
+
+        // 发送保存请求
+        fetch('/doctor/prescription/save', {
+            method: 'POST',
+            body: formData
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('网络响应异常: ' + response.status);
+                }
+                return response.text();
+            })
+            .then(result => {
+                console.log('保存响应:', result);
+                if (result === 'success' || result.includes('成功')) {
+                    alert('处方保存成功！' + (prescriptionItems.length === 0 ? '（空处方）' : ''));
+
+                    // 核心修改：不刷新主页，而是调用主页的隐式局部同步函数
+                    if (window.opener && !window.opener.closed && typeof window.opener.syncTreatmentPlanFromPrescription === 'function') {
+                        window.opener.syncTreatmentPlanFromPrescription(currentRecordId);
+                    }
+
+                    // 关闭当前开药窗口
+                    setTimeout(() => {
+                        window.close();
+                    }, 500);
+                } else {
+                    alert('保存失败: ' + result);
+                    saveBtn.innerHTML = originalText;
+                    saveBtn.disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('保存失败:', error);
+                alert('保存失败，请检查网络连接: ' + error.message);
+                saveBtn.innerHTML = originalText;
+                saveBtn.disabled = false;
+            });
+    }
+
+    // XSS防护
+    function escapeHtml(text) {
+        // 1. 如果是 null 或 undefined，返回空字符串
+        if (text === null || text === undefined) return '';
+
+        // 2. 强制转换为字符串 (这是修复的关键)
+        const str = String(text);
+
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        // 3. 对字符串调用 replace
+        return str.replace(/[&<>"']/g, m => map[m]);
+    }
+</script>
+</body>
+</html>

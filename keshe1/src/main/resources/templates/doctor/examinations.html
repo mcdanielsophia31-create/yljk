@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>检查报告管理</title>
+</head>
+<body>
+<div class="container-fluid">
+    <div class="card">
+        <!-- 修改标题行，添加状态筛选下拉框 -->
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <h4><i class="fas fa-microscope me-2"></i>检查报告管理</h4>
+            <div class="d-flex align-items-center">
+                <label class="me-2 mb-0">状态筛选：</label>
+                <select id="statusFilter" class="form-select form-select-sm" style="width: 120px;" onchange="filterByStatus()">
+                    <option value="">全部</option>
+                    <option value="待完成">未完成</option>
+                    <option value="已完成">已完成</option>
+                </select>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>病历ID</th>
+                        <th>项目名称</th>
+                        <th>类型</th>
+                        <th>患者姓名</th>
+                        <th>医生姓名</th>
+                        <th>检查日期</th>
+                        <th>价格</th>
+                        <th>状态</th>
+                        <th>检查结果</th>
+                        <th>操作</th>
+                    </tr>
+                    </thead>
+                    <tbody id="examTableBody">
+                    <!-- 数据会动态加载到这里 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="fillResultModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">填写检查结果</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="currentExamId">
+                <div class="mb-3">
+                    <label class="form-label">检查项目：</label>
+                    <span id="examItemNameDisplay" class="fw-bold"></span>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">检查结果：</label>
+                    <textarea id="examResultInput" class="form-control" rows="4" placeholder="请输入具体的检查结果数值或描述..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="submitExamResult()">提交结果</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 全局变量，存储当前筛选状态
+    let currentStatus = '';
+
+    // 修改 loadExaminations 函数，添加状态参数
+    function loadExaminations(status = '') {
+        console.log("开始加载检查报告数据，状态筛选:", status);
+
+        // 构建请求URL
+        let url = '/doctor/api/examinations/list';
+        if (status) {
+            url += `?status=${encodeURIComponent(status)}`;
+        }
+
+        fetch(url)
+            .then(res => {
+                if (!res.ok) {
+                    throw new Error('网络响应错误');
+                }
+                return res.json();
+            })
+            .then(data => {
+                console.log("接收到检查数据:", data);
+                const tbody = document.getElementById('examTableBody');
+
+                if (!tbody) {
+                    console.error("错误：未找到 examTableBody 元素");
+                    return;
+                }
+
+                tbody.innerHTML = '';
+
+                if (!data || data.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="11" class="text-center text-muted py-4">
+                                <i class="fas fa-inbox me-2"></i>暂无检查记录
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                data.forEach(exam => {
+                    console.log("处理检查记录:", exam);
+                    // 判断状态样式
+                    const isPending = exam.status === '待完成' || !exam.status;
+                    const statusBadge = isPending
+                        ? '<span class="badge bg-warning text-dark">待完成</span>'
+                        : '<span class="badge bg-success">已完成</span>';
+
+                    const actionBtn = isPending
+                        ? `<button class="btn btn-sm btn-outline-primary" onclick="openFillResultModal(${exam.id}, '${exam.examinationItemName || '未知项目'}')">
+                              <i class="fas fa-pen me-1"></i>填写结果
+                           </button>
+                           <button class="btn btn-sm btn-outline-danger ms-1" onclick="deleteExamination(${exam.id})">
+                              <i class="fas fa-trash"></i>
+                           </button>`
+                        : '<span class="text-muted"><i class="fas fa-check-circle"></i>已完成</span>';
+
+                    const resultText = exam.examinationResult || '-';
+
+                    const tr = `
+                        <tr>
+                            <td>#${exam.id}</td>
+                            <td>${exam.recordId || '-'}</td>
+                            <td class="fw-bold text-primary">${exam.examinationItemName || '未知项目'}</td>
+                            <td>${exam.examinationType || '-'}</td>
+                            <td>${exam.patientName || '未知'}</td>
+                            <td>${exam.doctorName || '-'}</td>
+                            <td>${exam.examinationDate || '-'}</td>
+                            <td>${exam.price ? '¥' + exam.price : '-'}</td>
+                            <td>${statusBadge}</td>
+                            <td class="text-truncate" style="max-width: 150px;" title="${resultText}">${resultText}</td>
+                            <td>${actionBtn}</td>
+                        </tr>
+                    `;
+                    tbody.innerHTML += tr;
+                });
+            })
+            .catch(error => {
+                console.error("加载检查数据失败:", error);
+                const tbody = document.getElementById('examTableBody');
+                if (tbody) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="11" class="text-center text-danger py-4">
+                                <i class="fas fa-exclamation-triangle me-2"></i>加载失败，请稍后重试
+                            </td>
+                        </tr>
+                    `;
+                }
+            });
+    }
+
+    // 状态筛选函数
+    function filterByStatus() {
+        const statusFilter = document.getElementById('statusFilter');
+        const selectedStatus = statusFilter.value;
+
+        // 更新当前状态
+        currentStatus = selectedStatus;
+
+        // 重新加载数据
+        loadExaminations(selectedStatus);
+    }
+
+    // 删除检查项目
+    function deleteExamination(id) {
+        if (!confirm('确定要删除这个检查项目吗？')) {
+            return;
+        }
+
+        fetch(`/doctor/api/examinations/${id}`, {
+            method: 'DELETE',
+        })
+            .then(res => {
+                if (res.ok) {
+                    alert('删除成功');
+                    loadExaminations(currentStatus); // 重新加载当前筛选状态的数据
+                } else {
+                    return res.text().then(text => {
+                        throw new Error(text || '删除失败');
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('删除失败:', error);
+                alert(error.message || '删除失败，请重试');
+            });
+    }
+
+    function openFillResultModal(id, name) {
+        document.getElementById('currentExamId').value = id;
+        document.getElementById('examItemNameDisplay').innerText = name || '未知项目';
+        document.getElementById('examResultInput').value = '';
+        new bootstrap.Modal(document.getElementById('fillResultModal')).show();
+    }
+
+    function submitExamResult() {
+        const id = document.getElementById('currentExamId').value;
+        const result = document.getElementById('examResultInput').value;
+
+        if(!result || result.trim() === '') {
+            alert("请填写检查结果");
+            return;
+        }
+
+        fetch('/doctor/api/examinations/result', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({id: id, result: result})
+        })
+            .then(res => {
+                if(res.ok) {
+                    alert("结果已保存");
+                    bootstrap.Modal.getInstance(document.getElementById('fillResultModal')).hide();
+                    loadExaminations(currentStatus); // 刷新当前筛选状态的列表
+                } else {
+                    alert("保存失败，请重试");
+                }
+            })
+            .catch(error => {
+                console.error("提交结果失败:", error);
+                alert("网络错误，请稍后重试");
+            });
+    }
+
+    // 页面初始化 - 只在元素加载完成后执行
+    function initExaminations() {
+        console.log("初始化检查报告页面");
+
+        // 确保 DOM 元素已经加载
+        if (document.getElementById('examTableBody')) {
+            loadExaminations(currentStatus);
+        } else {
+            console.warn("examTableBody 尚未加载，等待后重试");
+            setTimeout(initExaminations, 100);
+        }
+    }
+
+    // 导出函数到全局作用域，以便 dashboard.html 可以调用
+    window.loadExaminations = loadExaminations;
+    window.openFillResultModal = openFillResultModal;
+    window.submitExamResult = submitExamResult;
+    window.initExaminations = initExaminations;
+    window.filterByStatus = filterByStatus;
+    window.deleteExamination = deleteExamination;
+
+    // 添加一个可被外部检测的事件
+    window.dispatchEvent(new Event('examinationsScriptsLoaded'));
+
+    // 立即尝试初始化
+    try {
+        initExaminations();
+    } catch (error) {
+        console.error("初始化失败，将延迟执行:", error);
+        setTimeout(initExaminations, 200);
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,93 @@
+<!-- 预约管理页面 - 纯内容片段 -->
+<div class="page-header">
+    <h4><i class="fas fa-tasks me-2"></i>预约管理</h4>
+    <p>管理您所有的预约记录和操作</p>
+</div>
+
+<!-- 预约管理列表 -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5><i class="fas fa-list me-2"></i>完整预约列表</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                <tr>
+                    <th>预约日期</th>
+                    <th>预约时间</th>
+                    <th>医生姓名</th>
+                    <th>科室</th>
+                    <th>病症描述</th>
+                    <th>状态</th>
+                    <th>操作</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:if="${appointments == null or #lists.isEmpty(appointments)}">
+                    <td colspan="7" class="text-center text-muted">暂无预约记录</td>
+                </tr>
+                <tr th:each="appointment : ${appointments}" th:attr="data-appointment-id=${appointment.id}">
+                    <td th:text="${#temporals.format(appointment.appointmentDate, 'yyyy-MM-dd')}">2025-12-23</td>
+                    <td th:text="${appointment.appointmentTime}">14:00</td>
+                    <td th:text="${appointment.doctorName}">张医生</td>
+                    <td th:text="${appointment.departmentName}">内科</td>
+                    <td>
+                        <small th:text="${appointment.reason != null ? (appointment.reason.length > 20 ? appointment.reason.substring(0, 20) + '...' : appointment.reason) : '-'}">症状描述</small>
+                    </td>
+                    <td>
+                        <span th:if="${appointment.status == '待确认'}" class="badge bg-warning">待确认</span>
+                        <span th:if="${appointment.status == '已确认'}" class="badge bg-success">已确认</span>
+                        <span th:if="${appointment.status == '已完成'}" class="badge bg-info">已完成</span>
+                        <span th:if="${appointment.status == '已取消'}" class="badge bg-secondary">已取消</span>
+                    </td>
+                    <td>
+                        <div class="d-flex align-items-center gap-3">
+                            <!-- 使用 th:switch 根据状态显示不同内容 -->
+                            <th:block th:switch="${appointment.status}">
+                                <!-- 待确认：显示编辑和取消按钮 -->
+                                <th:block th:case="'待确认'">
+                                    <button class="btn btn-sm d-flex align-items-center gap-1 text-primary bg-transparent border-0 p-1"
+                                            th:attr="data-action=edit-appointment,data-id=${appointment.id}"
+                                            title="编辑预约"
+                                            style="cursor: pointer; font-weight: 500;">
+                                        <i class="fas fa-edit"></i> 编辑
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger rounded-pill px-2 py-1 d-flex align-items-center gap-1"
+                                            th:attr="data-action=cancel-appointment,data-id=${appointment.id}"
+                                            title="取消预约">
+                                        <i class="fas fa-times fa-xs"></i> 取消
+                                    </button>
+                                </th:block>
+
+                                <!-- 已确认：显示提示文字，不显示按钮 -->
+                                <th:block th:case="'已确认'">
+                                    <span class="text-muted small d-flex align-items-center gap-1">
+                                        <i class="fas fa-check-circle text-success"></i>
+                                        已确认，不可修改
+                                    </span>
+                                </th:block>
+
+                                <!-- 已完成 -->
+                                <th:block th:case="'已完成'">
+                                    <span class="badge bg-info rounded-pill px-2 py-1">已完成</span>
+                                </th:block>
+
+                                <!-- 已取消 -->
+                                <th:block th:case="'已取消'">
+                                    <span class="badge bg-secondary rounded-pill px-2 py-1">已取消</span>
+                                </th:block>
+
+                                <!-- 其他状态默认 -->
+                                <th:block th:case="*">
+                                    <span class="badge bg-secondary rounded-pill px-2 py-1" th:text="${appointment.status}"></span>
+                                </th:block>
+                            </th:block>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

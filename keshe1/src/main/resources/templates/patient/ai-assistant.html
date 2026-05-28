@@ -1,0 +1,128 @@
+<!-- 在ai-assistant.html文件末尾补充完整以下脚本 -->
+<script>
+    // 补全之前的代码...
+
+    // 获取当前时间用于消息显示
+    function getCurrentTime() {
+        const now = new Date();
+        return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    // 调用豆包AI API
+    async function getDoubaoAIResponse(userMessage) {
+        try {
+            const response = await fetch('/api/doubao/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    messages: messageHistory
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || `API请求失败: ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            // 检查响应格式并提取消息内容
+            if (data && data.choices && data.choices.length > 0 &&
+                data.choices[0].message && data.choices[0].message.content) {
+                return data.choices[0].message.content;
+            } else {
+                console.error('API响应格式不正确:', data);
+                throw new Error('AI服务返回格式错误');
+            }
+        } catch (error) {
+            console.error('获取AI响应时发生错误:', error);
+            throw error;
+        }
+    }
+
+    // 完善发送消息函数
+    async function sendMessage() {
+        const input = document.getElementById('chatInput');
+        const message = input.value.trim();
+
+        if (!message) return;
+
+        const chatMessages = document.getElementById('aiChatMessages');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const sendButton = document.getElementById('sendButton');
+
+        // 禁用发送按钮，显示加载指示器
+        sendButton.disabled = true;
+        loadingIndicator.style.display = 'block';
+
+        // 添加用户消息
+        const userMessage = `
+            <div class="chat-message user">
+                <div>
+                    <div class="message-content">
+                        <p>${message}</p>
+                    </div>
+                    <div class="message-time">${getCurrentTime()}</div>
+                </div>
+                <div class="message-avatar"><i class="fas fa-user"></i></div>
+            </div>
+        `;
+        chatMessages.innerHTML += userMessage;
+
+        // 清空输入框
+        input.value = '';
+
+        // 滚动到底部
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+
+        // 将用户消息添加到历史记录
+        messageHistory.push({ role: "user", content: message });
+
+        try {
+            // 调用豆包AI API
+            const aiResponse = await getDoubaoAIResponse(message);
+
+            // 添加AI回复
+            const aiMessage = `
+                <div class="chat-message">
+                    <div class="message-avatar"><i class="fas fa-robot"></i></div>
+                    <div>
+                        <div class="message-content">
+                            <p>${aiResponse}</p>
+                        </div>
+                        <div class="message-time">${getCurrentTime()}</div>
+                    </div>
+                </div>
+            `;
+            chatMessages.innerHTML += aiMessage;
+
+            // 将AI回复添加到历史记录
+            messageHistory.push({ role: "assistant", content: aiResponse });
+        } catch (error) {
+            console.error('AI助手调用失败:', error);
+
+            // 添加错误提示
+            const errorMessage = `
+                <div class="chat-message">
+                    <div class="message-avatar"><i class="fas fa-robot"></i></div>
+                    <div>
+                        <div class="message-content">
+                            <p>抱歉，AI助手暂时无法响应：${error.message || '请检查网络连接或稍后再试'}</p>
+                        </div>
+                        <div class="message-time">${getCurrentTime()}</div>
+                    </div>
+                </div>
+            `;
+            chatMessages.innerHTML += errorMessage;
+        } finally {
+            // 恢复按钮状态，隐藏加载指示器
+            sendButton.disabled = false;
+            loadingIndicator.style.display = 'none';
+
+            // 滚动到底部
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+    }
+</script>

@@ -1,0 +1,152 @@
+<!-- admin/overall-schedule-content.html -->
+<div class="row" th:fragment="content">
+    <div class="col-12">
+        <div class="card">
+            <!-- 上部分：筛选区 -->
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="fas fa-filter me-2"></i>筛选条件</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex gap-3 mb-3">
+                    <div class="flex-grow-1">
+                        <label for="departmentSelect" class="form-label">请选择科室</label>
+                        <select class="form-select" id="departmentSelect">
+                            <option value="">请选择科室</option>
+                            <!-- 使用Thymeleaf动态生成科室选项 -->
+                            <option th:each="dept : ${departments}"
+                                    th:value="${dept.id}"
+                                    th:text="${dept.name}"
+                                    th:selected="${defaultDepartmentId != null and defaultDepartmentId == dept.id}">
+                            </option>
+                        </select>
+                        <div th:if="${departments == null or #lists.isEmpty(departments)}" class="text-danger mt-1">
+                            暂无科室数据
+                        </div>
+                    </div>
+                    <div class="flex-grow-1">
+                        <label for="weekSelectBtn" class="form-label">请选择周次</label>
+                        <div class="dropdown">
+                            <button class="btn btn-outline-secondary dropdown-toggle w-100" type="button" id="weekSelectBtn" data-bs-toggle="dropdown" aria-expanded="false">
+                                请选择周次
+                            </button>
+                            <div class="dropdown-menu p-3" style="min-width: 400px;">
+                                <div class="week-navigation">
+                                    <div class="text-center mb-2">
+                                        <button class="btn btn-sm btn-outline-primary me-2" id="prevWeekBtn">上周</button>
+                                        <button class="btn btn-sm btn-primary me-2" id="currentWeekBtn">本周</button>
+                                        <button class="btn btn-sm btn-outline-primary" id="nextWeekBtn">下周</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex-grow-1">
+                        <label for="exportBtn" class="form-label">请选择导出排班表的类型</label>
+                        <select class="form-select" id="exportBtn">
+                            <option value="">请选择导出排班表的类型</option>
+                            <option value="week">所选周次排班表</option>
+                            <option value="month">周次所在月份排班表</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 中间部分：排班操作区 -->
+            <div class="card-header mt-3">
+                <h5 class="card-title mb-0"><i class="fas fa-calendar-week me-2"></i>周视图排班矩阵</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    请先选择科室和周次查看排班信息
+                </div>
+            </div>
+
+            <!-- 下部分：操作按钮区 -->
+            <div class="card-header mt-3">
+                <h5 class="card-title mb-0"><i class="fas fa-tools me-2"></i>操作区域</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex flex-wrap gap-2">
+                    <button class="btn btn-warning" id="resetWeekBtn">
+                        <i class="fas fa-undo me-1"></i>重置所选周
+                    </button>
+                    <button class="btn btn-info" id="copyPrevWeekBtn">
+                        <i class="fas fa-copy me-1"></i>复制上周排班
+                    </button>
+                    <button class="btn btn-secondary" id="refreshPageBtn">
+                        <i class="fas fa-sync-alt me-1"></i>刷新
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 页面加载后立即执行
+    (function() {
+        console.log('总体排班页面脚本加载');
+
+        // 获取默认选中的科室
+        const deptSelect = document.getElementById('departmentSelect');
+        if (deptSelect && deptSelect.value) {
+            window.currentDepartmentId = deptSelect.value;
+            console.log('默认科室ID:', window.currentDepartmentId);
+        }
+
+        // 初始化当前周
+        function initializeCurrentWeek() {
+            const today = new Date();
+            const dayOfWeek = today.getDay();
+            const diffToMonday = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+            const monday = new Date(today);
+            monday.setDate(diffToMonday);
+
+            window.currentWeekStart = new Date(monday);
+            window.currentWeekEnd = new Date(monday);
+            window.currentWeekEnd.setDate(window.currentWeekEnd.getDate() + 6);
+
+            const weekSelectBtn = document.getElementById('weekSelectBtn');
+            if (weekSelectBtn) {
+                weekSelectBtn.textContent =
+                    `${window.currentWeekStart.getFullYear()}年${window.currentWeekStart.getMonth() + 1}月${window.currentWeekStart.getDate()}日-${window.currentWeekEnd.getDate()}日`;
+            }
+        }
+
+        // 绑定事件
+        function bindEvents() {
+            // 科室选择改变事件
+            if (deptSelect) {
+                deptSelect.addEventListener('change', function() {
+                    window.currentDepartmentId = this.value;
+                    console.log('科室已选择:', this.value);
+                });
+            }
+
+            // 周次选择按钮事件
+            const currentWeekBtn = document.getElementById('currentWeekBtn');
+            if (currentWeekBtn) {
+                currentWeekBtn.addEventListener('click', function() {
+                    initializeCurrentWeek();
+                });
+            }
+
+            // 其他按钮事件
+            document.querySelectorAll('#resetWeekBtn, #copyPrevWeekBtn, #refreshPageBtn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    if (!window.currentDepartmentId) {
+                        alert('请先选择科室');
+                        return;
+                    }
+                    alert('操作: ' + this.id);
+                });
+            });
+        }
+
+        // 页面初始化
+        initializeCurrentWeek();
+        bindEvents();
+
+        console.log('总体排班页面初始化完成');
+    })();
+</script>

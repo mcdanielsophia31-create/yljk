@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>药物管理内容</title>
+</head>
+<body>
+<!-- 使用 container-fluid 作为主要容器，以便 dashboard.html 的 loadContent 正确识别 -->
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="dashboard-header">
+        <div>
+            <h1>药物管理</h1>
+            <p>管理系统中的所有药物信息</p>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        <input type="text" id="medicineSearchInput" class="form-control" placeholder="搜索药物名称、通用名或生产厂家...">
+                        <button class="btn btn-primary" onclick="window.searchMedicines()">搜索</button>
+                    </div>
+                </div>
+                <div class="col-md-6 text-end">
+                    <button class="btn btn-primary-custom" onclick="window.openCreateMedicineModal()">
+                        <i class="fas fa-plus"></i> 创建药物
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Debug Info -->
+    <div id="debugInfo" class="alert alert-info d-none">
+        正在加载数据...
+    </div>
+
+    <!-- Table -->
+    <div class="card" style="display: block !important;">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover" id="medicineTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>药物名称</th>
+                            <th>通用名</th>
+                            <th>剂型</th>
+                            <th>规格</th>
+                            <th>生产厂家</th>
+                            <th>库存</th>
+                            <th>价格</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Data will be loaded here via JS -->
+                        <tr><td colspan="9" class="text-center">正在加载数据...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create/Edit Modal -->
+    <div class="modal fade" id="medicineModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="medicineModalLabel">创建药物</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="medicineForm">
+                        <input type="hidden" id="medicineId" name="id">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">药物名称 <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="medicineName" name="name" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">通用名</label>
+                                <input type="text" class="form-control" id="medicineGenericName" name="genericName">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">剂型</label>
+                                <input type="text" class="form-control" id="medicineDosageForm" name="dosageForm" placeholder="例如：片剂、胶囊">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">规格</label>
+                                <input type="text" class="form-control" id="medicineSpecification" name="specification" placeholder="例如：10mg*12片">
+                            </div>
+                        </div>
+                         <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">剂量单位</label>
+                                <input type="text" class="form-control" id="medicineDosageUnit" name="dosageUnit" placeholder="例如：mg">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">生产厂家</label>
+                                <input type="text" class="form-control" id="medicineManufacturer" name="manufacturer">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">库存数量</label>
+                                <input type="number" class="form-control" id="medicineStockQuantity" name="stockQuantity" min="0" value="0">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">库存单位</label>
+                                <input type="text" class="form-control" id="medicineStockUnit" name="stockUnit" placeholder="例如：盒">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">价格</label>
+                                <input type="number" class="form-control" id="medicinePrice" name="price" step="0.01" min="0" value="0.00">
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="window.saveMedicine()">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+     <div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">确认删除</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>确定要删除该药物吗？此操作不可恢复。</p>
+                    <input type="hidden" id="deleteMedicineId">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-danger" onclick="window.confirmDeleteMedicine()">删除</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        console.log('Medicine content script loaded');
+
+        // Attach functions to window to ensure they are globally available
+        window.searchMedicines = function() {
+            console.log('searchMedicines called');
+            const keyword = document.getElementById('medicineSearchInput').value;
+            window.loadMedicineList(keyword);
+        };
+
+        window.loadMedicineList = function(keyword = '') {
+            console.log('loadMedicineList called, keyword:', keyword);
+            const debugInfo = document.getElementById('debugInfo');
+            if(debugInfo) {
+                 debugInfo.classList.remove('d-none');
+                 debugInfo.textContent = '正在请求数据...';
+            }
+            
+            const tbody = document.querySelector('#medicineTable tbody');
+            if (!tbody) {
+                console.error('Table body not found!');
+                if(debugInfo) debugInfo.textContent = '错误：找不到表格元素';
+                return;
+            }
+            
+            let url = '/admin/medicines/list';
+            if (keyword) {
+                url += '?keyword=' + encodeURIComponent(keyword);
+            }
+
+            fetch(url)
+                .then(response => {
+                    console.log('Fetch response status:', response.status);
+                    if (response.redirected && response.url.includes('login')) {
+                        window.location.href = '/login';
+                        return;
+                    }
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok: ' + response.status);
+                    }
+                    return response.text().then(text => {
+                        try {
+                            return JSON.parse(text);
+                        } catch (e) {
+                            console.error('Failed to parse JSON:', text.substring(0, 100));
+                            throw new Error('Invalid JSON response: ' + text.substring(0, 50));
+                        }
+                    });
+                })
+                .then(data => {
+                    if (!data) return; // Handled above
+                    console.log('Data received:', data);
+                    if(debugInfo) {
+                         debugInfo.textContent = '数据加载成功，共 ' + data.length + ' 条记录';
+                         setTimeout(() => debugInfo.classList.add('d-none'), 2000);
+                    }
+                    tbody.innerHTML = '';
+                    if (!data || data.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="9" class="text-center">暂无药物数据</td></tr>';
+                        return;
+                    }
+                    
+                    data.forEach(medicine => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${medicine.id}</td>
+                            <td>${medicine.name || '-'}</td>
+                            <td>${medicine.genericName || '-'}</td>
+                            <td>${medicine.dosageForm || '-'}</td>
+                            <td>${medicine.specification || '-'}</td>
+                            <td>${medicine.manufacturer || '-'}</td>
+                            <td>${medicine.stockQuantity !== null ? medicine.stockQuantity : 0} ${medicine.stockUnit || ''}</td>
+                            <td>¥${medicine.price !== null ? medicine.price : '0.00'}</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary me-1" onclick="window.openEditMedicineModal(${medicine.id})">
+                                    <i class="fas fa-edit"></i> 修改
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="window.openDeleteMedicineModal(${medicine.id})">
+                                    <i class="fas fa-trash"></i> 删除
+                                </button>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading medicine list:', error);
+                    if(debugInfo) {
+                         debugInfo.classList.remove('d-none');
+                         debugInfo.classList.remove('alert-info');
+                         debugInfo.classList.add('alert-danger');
+                         debugInfo.textContent = '加载失败: ' + error.message;
+                    }
+                    tbody.innerHTML = '<tr><td colspan="9" class="text-center text-danger">加载失败: ' + error.message + '</td></tr>';
+                });
+        };
+
+        window.medicineModal = null;
+        window.deleteConfirmModal = null;
+
+        window.openCreateMedicineModal = function() {
+            console.log('openCreateMedicineModal called');
+            const form = document.getElementById('medicineForm');
+            if (form) form.reset();
+            
+            const idInput = document.getElementById('medicineId');
+            if (idInput) idInput.value = '';
+            
+            const label = document.getElementById('medicineModalLabel');
+            if (label) label.textContent = '创建药物';
+            
+            const modalEl = document.getElementById('medicineModal');
+            if (!modalEl) {
+                console.error('Modal element not found');
+                return;
+            }
+
+            try {
+                if (!window.medicineModal) {
+                    window.medicineModal = new bootstrap.Modal(modalEl);
+                }
+                window.medicineModal.show();
+            } catch (e) {
+                console.error('Error showing modal:', e);
+                alert('无法打开窗口，请检查Bootstrap是否正确加载');
+            }
+        };
+
+        window.openEditMedicineModal = function(id) {
+            console.log('openEditMedicineModal called for id:', id);
+            fetch('/admin/medicines/' + id)
+                .then(response => response.json())
+                .then(medicine => {
+                    document.getElementById('medicineId').value = medicine.id;
+                    document.getElementById('medicineName').value = medicine.name || '';
+                    document.getElementById('medicineGenericName').value = medicine.genericName || '';
+                    document.getElementById('medicineDosageForm').value = medicine.dosageForm || '';
+                    document.getElementById('medicineSpecification').value = medicine.specification || '';
+                    document.getElementById('medicineDosageUnit').value = medicine.dosageUnit || '';
+                    document.getElementById('medicineManufacturer').value = medicine.manufacturer || '';
+                    document.getElementById('medicineStockQuantity').value = medicine.stockQuantity || 0;
+                    document.getElementById('medicineStockUnit').value = medicine.stockUnit || '';
+                    document.getElementById('medicinePrice').value = medicine.price || 0;
+                    
+                    document.getElementById('medicineModalLabel').textContent = '修改药物';
+                    
+                    const modalEl = document.getElementById('medicineModal');
+                    if (!window.medicineModal) {
+                        window.medicineModal = new bootstrap.Modal(modalEl);
+                    }
+                    window.medicineModal.show();
+                })
+                .catch(error => {
+                    console.error('Error fetching medicine details:', error);
+                    alert('获取药物详情失败');
+                });
+        };
+
+        window.saveMedicine = function() {
+            console.log('saveMedicine called');
+            const form = document.getElementById('medicineForm');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+            
+            // Convert numbers
+            if (data.stockQuantity) data.stockQuantity = parseInt(data.stockQuantity);
+            if (data.price) data.price = parseFloat(data.price);
+
+            fetch('/admin/medicines/save', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => {
+                if (response.ok) {
+                    if (window.medicineModal) window.medicineModal.hide();
+                    const searchInput = document.getElementById('medicineSearchInput');
+                    window.loadMedicineList(searchInput ? searchInput.value : '');
+                } else {
+                    return response.text().then(text => { throw new Error(text) });
+                }
+            })
+            .catch(error => {
+                console.error('Save error:', error);
+                alert('保存失败: ' + error.message);
+            });
+        };
+
+        window.openDeleteMedicineModal = function(id) {
+            document.getElementById('deleteMedicineId').value = id;
+            const modalEl = document.getElementById('deleteConfirmModal');
+            if (!window.deleteConfirmModal) {
+                window.deleteConfirmModal = new bootstrap.Modal(modalEl);
+            }
+            window.deleteConfirmModal.show();
+        };
+
+        window.confirmDeleteMedicine = function() {
+            const id = document.getElementById('deleteMedicineId').value;
+            fetch('/admin/medicines/' + id, {
+                method: 'DELETE'
+            })
+            .then(response => {
+                if (response.ok) {
+                    if (window.deleteConfirmModal) window.deleteConfirmModal.hide();
+                    const searchInput = document.getElementById('medicineSearchInput');
+                    window.loadMedicineList(searchInput ? searchInput.value : '');
+                } else {
+                    return response.text().then(text => { throw new Error(text) });
+                }
+            })
+            .catch(error => {
+                alert('删除失败: ' + error.message);
+            });
+        };
+
+        // Initialization
+        // Use a slight delay to ensure DOM is ready and previous scripts are done
+        setTimeout(() => {
+            console.log('Initializing medicine page...');
+            window.loadMedicineList();
+            
+            // Bind enter key for search
+            const searchInput = document.getElementById('medicineSearchInput');
+            if (searchInput) {
+                searchInput.addEventListener('keypress', function (e) {
+                    if (e.key === 'Enter') {
+                        window.searchMedicines();
+                    }
+                });
+            }
+        }, 100);
+    </script>
+</div>
+</body>
+</html>

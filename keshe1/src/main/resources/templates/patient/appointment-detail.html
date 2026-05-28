@@ -1,0 +1,78 @@
+<!-- 预约详情页面 - 纯内容片段 -->
+<div class="page-header">
+    <h4><i class="fas fa-file-medical me-2"></i>预约详情</h4>
+    <p>查看预约的详细信息</p>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h5><i class="fas fa-info-circle me-2"></i>预约信息</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">预约日期</label>
+                    <p class="mb-0" th:text="${appointment.appointmentDate != null ? #temporals.format(appointment.appointmentDate, 'yyyy-MM-dd') : '-'}">2025-12-25</p>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">预约时间</label>
+                    <p class="mb-0" th:text="${appointment.appointmentTime != null ? appointment.appointmentTime : '-'}">14:00</p>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">时间段</label>
+                    <p class="mb-0" th:text="${appointment.timeSlot != null ? appointment.timeSlot : '-'}">下午</p>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">预约状态</label>
+                    <span class="badge" th:if="${appointment.status == '待确认'}" th:classappend="bg-warning">待确认</span>
+                    <span class="badge" th:if="${appointment.status == '已确认'}" th:classappend="bg-success">已确认</span>
+                    <span class="badge" th:if="${appointment.status == '已完成'}" th:classappend="bg-info">已完成</span>
+                    <span class="badge" th:if="${appointment.status == '已取消'}" th:classappend="bg-secondary">已取消</span>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">医生姓名</label>
+                    <p class="mb-0" th:text="${appointment.doctorName != null ? appointment.doctorName : '-'}">张医生</p>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">科室</label>
+                    <p class="mb-0" th:text="${appointment.departmentName != null ? appointment.departmentName : '-'}">内科</p>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">医生职称</label>
+                    <p class="mb-0" th:text="${appointment.doctorTitle != null ? appointment.doctorTitle : '-'}">主治医师</p>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">医生专长</label>
+                    <p class="mb-0" th:text="${appointment.doctorSpecialty != null ? appointment.doctorSpecialty : '-'}">心血管疾病</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mb-3">
+            <label class="form-label fw-bold">病症描述</label>
+            <p class="mb-0" th:text="${appointment.reason != null ? appointment.reason : '-'}">胸闷气短，心悸</p>
+        </div>
+        
+        <div class="mb-3">
+            <label class="form-label fw-bold">既往病史</label>
+            <p class="mb-0" th:text="${appointment.notes != null ? appointment.notes : '-'}">高血压病史</p>
+        </div>
+        
+        <div class="mb-3">
+            <label class="form-label fw-bold">创建时间</label>
+            <p class="mb-0" th:text="${appointment.createdTime != null ? #temporals.format(appointment.createdTime, 'yyyy-MM-dd HH:mm') : '-'}">2025-12-20 10:30</p>
+        </div>
+        
+        <div class="d-flex justify-content-between">
+            <button class="btn btn-outline-primary" onclick="loadMyAppointments()">
+                <i class="fas fa-arrow-left me-2"></i>返回预约列表
+            </button>
+            <button class="btn btn-outline-primary" onclick="loadAppointmentManagement()">
+                <i class="fas fa-tasks me-2"></i>返回预约管理
+            </button>
+        </div>
+    </div>
+</div>

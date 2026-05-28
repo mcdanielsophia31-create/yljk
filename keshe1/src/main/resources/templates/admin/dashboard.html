@@ -1,0 +1,1453 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理员工作站 - 医疗健康管理系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" th:href="@{/css/unified-style.css}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', 'Segoe UI', Arial, sans-serif;
+            background-color: #F5F7FA;
+            overflow-x: hidden;
+        }
+
+        /* ============ 左侧侧边栏 - 黑色主题 ============ */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            width: 260px;
+            background: linear-gradient(135deg, #1F2937 0%, #111827 100%);
+            box-shadow: 3px 0 15px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .sidebar.collapsed {
+            width: 70px;
+        }
+
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+        }
+
+        .sidebar-header {
+            padding: 25px 20px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s;
+        }
+
+        .sidebar.collapsed .sidebar-header {
+            padding: 15px 5px;
+        }
+
+        .sidebar-header .user-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #4F46E5, #7C3AED);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 12px;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .sidebar.collapsed .user-avatar {
+            width: 40px;
+            height: 40px;
+            font-size: 18px;
+        }
+
+        .sidebar-header h5 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #FFFFFF;
+            margin-bottom: 5px;
+            transition: all 0.3s;
+        }
+
+        .sidebar.collapsed .sidebar-header h5,
+        .sidebar.collapsed .sidebar-header small {
+            display: none;
+        }
+
+        .sidebar-header small {
+            color: #D1D5DB;
+            font-size: 12px;
+        }
+
+        .sidebar-nav {
+            padding: 15px 0;
+        }
+
+        .nav-item {
+            margin: 5px 15px;
+        }
+
+        .sidebar.collapsed .nav-item {
+            margin: 5px 10px;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 14px 15px;
+            color: #D1D5DB;
+            text-decoration: none;
+            border-radius: 10px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 14px;
+            font-weight: 500;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .nav-link:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #FFFFFF;
+            transform: translateX(3px);
+        }
+
+        .nav-link.active {
+            background: linear-gradient(90deg, #4F46E5 0%, #7C3AED 100%);
+            color: #FFFFFF;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
+        }
+
+        .nav-link i {
+            min-width: 20px;
+            margin-right: 12px;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        .sidebar.collapsed .nav-link i {
+            margin-right: 0;
+        }
+
+        .sidebar.collapsed .nav-link .nav-text {
+            display: none;
+        }
+
+        .nav-link .chevron {
+            margin-left: auto;
+            font-size: 12px;
+            transition: transform 0.3s;
+        }
+
+        .nav-link.expanded .chevron {
+            transform: rotate(180deg);
+        }
+
+        .submenu {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .submenu.show {
+            max-height: 500px;
+        }
+
+        .submenu .nav-link {
+            padding-left: 47px;
+            font-size: 13px;
+            color: #9CA3AF;
+        }
+
+        .sidebar.collapsed .submenu {
+            display: none;
+        }
+
+        .toggle-sidebar-btn {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: transparent;
+            border: 2px solid rgba(79, 70, 229, 0.3);
+            color: #4F46E5;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            z-index: 10;
+        }
+
+        .toggle-sidebar-btn:hover {
+            background: #4F46E5;
+            color: #FFFFFF;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
+        }
+
+        /* ============ 主内容区域 ============ */
+        .main-content {
+            margin-left: 260px;
+            padding: 30px;
+            transition: margin-left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            min-height: 100vh;
+            padding-bottom: 100px;
+        }
+
+        .main-content.full-width {
+            margin-left: 70px;
+        }
+
+        .dashboard-header {
+            background: #FFFFFF;
+            border-radius: 16px;
+            padding: 28px 32px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+            margin-bottom: 28px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .dashboard-header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1A1A1A;
+            margin-bottom: 6px;
+        }
+
+        .dashboard-header p {
+            font-size: 14px;
+            color: #9CA3AF;
+            margin: 0;
+        }
+
+        .header-actions .btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+            margin-left: 10px;
+        }
+
+        .btn-primary-custom {
+            background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+            border: none;
+            color: white;
+        }
+
+        .btn-primary-custom:hover {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 6px 20px rgba(79, 70, 229, 0.4);
+        }
+
+        .btn-outline-custom {
+            border: 2px solid #E5E7EB;
+            color: #6B7280;
+            background: white;
+        }
+
+        .btn-outline-custom:hover {
+            border-color: #4F46E5;
+            color: #4F46E5;
+            background: #F0F4FF;
+        }
+
+        /* ============ 卡片样式 ============ */
+        .card {
+            background: #FFFFFF;
+            border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            border: 1px solid #F3F4F6;
+            margin-bottom: 24px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .card:hover {
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+            transform: translateY(-4px);
+        }
+
+        .card-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid #F3F4F6;
+            background: transparent;
+        }
+
+        .card-header h5 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1A1A1A;
+            margin: 0;
+        }
+
+        .card-body {
+            padding: 24px;
+        }
+
+        /* 统计卡片 */
+        .stat-card {
+            text-align: center;
+            padding: 24px 16px;
+            background: linear-gradient(135deg, #FFFFFF 0%, #F9FAFB 100%);
+            border: 2px solid #F0F4FF;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(79, 70, 229, 0.1) 0, transparent 70%);
+            transition: all 0.5s;
+        }
+
+        .stat-card:hover::before {
+            top: -30%;
+            right: -30%;
+        }
+
+        .stat-card .icon {
+            font-size: 32px;
+            color: #4F46E5;
+            margin-bottom: 12px;
+        }
+
+        .stat-card .number {
+            font-size: 32px;
+            font-weight: 700;
+            color: #1A1A1A;
+            margin-bottom: 8px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .stat-card .label {
+            font-size: 14px;
+            color: #6B7280;
+            font-weight: 500;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 70px;
+            }
+            .sidebar-header h5,
+            .sidebar-header small,
+            .nav-text,
+            .submenu {
+                display: none;
+            }
+            .main-content {
+                margin-left: 70px;
+            }
+        }
+    </style>
+</head>
+<body>
+<!-- 左侧侧边栏导航 -->
+<div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+        <div class="user-avatar" style="cursor: pointer;" onclick="location.href='/admin/profile'">
+            <span th:text="${(user != null and user.realName != null and #strings.length(user.realName) > 0) ? #strings.substring(user.realName, 0, 1) : 'A'}">A</span>
+        </div>
+        <h5 th:text="${user != null ? user.realName : '管理员用户'}">管理员用户</h5>
+        <small th:text="${user != null ? user.username : '用户名'}">用户名</small>
+    </div>
+
+    <ul class="nav flex-column sidebar-nav">
+        <!-- 我的主页 -->
+        <li class="nav-item">
+            <a class="nav-link active" href="/admin/dashboard">
+                <i class="fas fa-home"></i>
+                <span class="nav-text">我的主页</span>
+            </a>
+        </li>
+
+        <!-- 患者管理 -->
+        <li class="nav-item">
+            <a class="nav-link" href="#" onclick="toggleSubmenu(this); return false;">
+                <i class="fas fa-user-injured"></i>
+                <span class="nav-text">患者管理</span>
+                <i class="fas fa-chevron-down chevron"></i>
+            </a>
+            <ul class="submenu">
+                <li class="nav-item">
+                    <!--                  <a class="nav-link" href="#" onclick="loadContent('/admin/patients', '患者管理'); return false;">-->
+                    <!--                    hsy加-->
+                    <a class="nav-link" href="#" onclick="loadPatients(); return false;">
+                        <i class="fas fa-list"></i>
+                        <span class="nav-text">患者列表</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="loadContent('/admin/patients/analysis', '患者分析'); return false;">
+                        <i class="fas fa-chart-line"></i>
+                        <span class="nav-text">患者分析</span>
+                    </a>
+                </li>
+<!--                <li class="nav-item">-->
+<!--                    <a class="nav-link" href="#" onclick="loadContent('/error', '患者分析'); return false;">-->
+<!--                        <i class="fas fa-chart-line"></i>-->
+<!--                        <span class="nav-text">患者分析</span>-->
+<!--                    </a>-->
+<!--                </li>-->
+            </ul>
+        </li>
+
+        <!-- 医生管理 -->
+        <li class="nav-item">
+            <a class="nav-link" href="#" onclick="toggleSubmenu(this); return false;">
+                <i class="fas fa-user-md"></i>
+                <span class="nav-text">医生管理</span>
+                <i class="fas fa-chevron-down chevron"></i>
+            </a>
+            <ul class="submenu">
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="loadDoctors(); return false;">
+                        <i class="fas fa-list"></i>
+                        <span class="nav-text">医生列表</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="loadCreateDoctor(); return false;">
+                        <i class="fas fa-user-plus"></i>
+                        <span class="nav-text">创建医生</span>
+                    </a>
+                </li>
+            </ul>
+        </li>
+
+        <!-- ... existing code ... -->
+        <!-- 科室管理 -->
+        <li class="nav-item">
+            <a class="nav-link" href="#" onclick="toggleSubmenu(this); return false;">
+                <i class="fas fa-hospital"></i>
+                <span class="nav-text">科室管理</span>
+                <i class="fas fa-chevron-down chevron"></i>
+            </a>
+            <ul class="submenu">
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="loadContent('/admin/departments', '科室管理'); return false;">
+                        <i class="fas fa-list"></i>
+                        <span class="nav-text">科室列表</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="loadContent('/admin/departments/stats-page', '科室统计'); return false;">
+                        <i class="fas fa-chart-bar"></i>
+                        <span class="nav-text">科室统计</span>
+                    </a>
+                </li>
+            </ul>
+        </li>
+
+        <!-- 排班管理 -->
+        <li class="nav-item">
+            <a class="nav-link" href="#" onclick="toggleSubmenu(this); return false;">
+                <i class="fas fa-calendar-alt"></i>
+                <span class="nav-text">排班管理</span>
+                <i class="fas fa-chevron-down chevron"></i>
+            </a>
+            <ul class="submenu">
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="loadContent('/schedule/overall', '医生总体排班'); return false;">
+                        <i class="fas fa-list"></i>
+                        <span class="nav-text">总体排班</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="loadContent('/schedule/individual', '单人排班'); return false;">
+                        <i class="fas fa-user-md"></i>
+                        <span class="nav-text">单人排班</span>
+                    </a>
+                </li>
+            </ul>
+        </li>
+
+        <!-- 药物管理 -->
+        <li class="nav-item">
+            <a class="nav-link" href="#" onclick="loadContent('/admin/medicines', '药物管理'); return false;">
+                <i class="fas fa-pills"></i>
+                <span class="nav-text">药物管理</span>
+            </a>
+        </li>
+
+        <!-- 系统管理 -->
+        <li class="nav-item">
+            <a class="nav-link" href="#" onclick="toggleSubmenu(this); return false;">
+                <i class="fas fa-cog"></i>
+                <span class="nav-text">系统管理</span>
+                <i class="fas fa-chevron-down chevron"></i>
+            </a>
+            <ul class="submenu">
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="loadContent('/error', '系统配置'); return false;">
+                        <i class="fas fa-wrench"></i>
+                        <span class="nav-text">系统配置</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="loadContent('/error', '系统日志'); return false;">
+                        <i class="fas fa-file-alt"></i>
+                        <span class="nav-text">系统日志</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="loadContent('/error', '数据备份'); return false;">
+                        <i class="fas fa-database"></i>
+                        <span class="nav-text">数据备份</span>
+                    </a>
+                </li>
+            </ul>
+        </li>
+    </ul>
+
+    <!-- 侧边栏折叠按钮 -->
+    <button class="toggle-sidebar-btn" onclick="toggleSidebar()" title="折叠/展开侧边栏">
+        <i class="fas fa-angles-left" id="toggleIcon"></i>
+    </button>
+</div>
+
+<!-- 主内容区域 -->
+<div class="main-content" id="mainContent">
+    <!-- 顶部标题栏 -->
+    <div class="dashboard-header">
+        <div>
+            <h1>管理员工作站</h1>
+            <p>欢迎回来，<span th:text="${user != null ? user.realName : '管理员用户'}">管理员用户</span></p>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-outline-custom" onclick="location.href='/admin/profile'">
+                <i class="fas fa-cog"></i> 设置
+            </button>
+            <button class="btn btn-primary-custom" onclick="location.href='/logout'">
+                <i class="fas fa-sign-out-alt"></i> 退出
+            </button>
+        </div>
+    </div>
+
+    <!-- 统计卡片 -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card stat-card">
+                <div class="icon"><i class="fas fa-user-injured"></i></div>
+                <div class="number" th:text="${patientCount != null ? patientCount : 0}">0</div>
+                <div class="label">患者数量</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card">
+                <div class="icon"><i class="fas fa-user-md"></i></div>
+                <div class="number" th:text="${doctorCount != null ? doctorCount : 0}">0</div>
+                <div class="label">医生数量</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card">
+                <div class="icon"><i class="fas fa-hospital"></i></div>
+                <div class="number" th:text="${departmentCount != null ? departmentCount : 0}">0</div>
+                <div class="label">科室数量</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0"><i class="fas fa-chart-line me-2"></i>挂号趋势</h5>
+                    <div class="d-flex align-items-center">
+                        <label class="me-2">时间范围</label>
+                        <select class="form-select form-select-sm" id="trendRangeSelect" style="width: 140px;">
+                            <option value="7" selected>近7天</option>
+                            <option value="30">近30天</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <canvas id="trendChart" height="140"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0"><i class="fas fa-user-friends me-2"></i>患者年龄分布</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="ageDonutChart" height="260"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<!--    &lt;!&ndash; 快速操作 &ndash;&gt;-->
+<!--    <div class="row mt-4 mb-4">-->
+<!--        <div class="col-md-3">-->
+<!--            <a href="/admin/patients" class="btn btn-primary-custom w-100">-->
+<!--                <i class="fas fa-user-injured me-2"></i>管理患者-->
+<!--            </a>-->
+<!--        </div>-->
+<!--        <div class="col-md-3">-->
+<!--            <a href="/admin/doctors" class="btn btn-primary-custom w-100">-->
+<!--                <i class="fas fa-user-md me-2"></i>管理医生-->
+<!--            </a>-->
+<!--        </div>-->
+<!--        <div class="col-md-3">-->
+<!--            <a href="/admin/departments" class="btn btn-primary-custom w-100">-->
+<!--                <i class="fas fa-hospital me-2"></i>管理科室-->
+<!--            </a>-->
+<!--        </div>-->
+
+<!--    </div>-->
+<!--</div>-->
+
+<!-- 引入Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // 侧边栏折叠
+    function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const mainContent = document.getElementById('mainContent');
+        const toggleIcon = document.getElementById('toggleIcon');
+
+        sidebar.classList.toggle('collapsed');
+        mainContent.classList.toggle('full-width');
+
+        if (sidebar.classList.contains('collapsed')) {
+            toggleIcon.classList.remove('fa-angles-left');
+            toggleIcon.classList.add('fa-angles-right');
+        } else {
+            toggleIcon.classList.remove('fa-angles-right');
+            toggleIcon.classList.add('fa-angles-left');
+        }
+    }
+
+    // 子菜单折叠/展开
+    function toggleSubmenu(linkElement) {
+        const submenu = linkElement.nextElementSibling;
+        const allSubmenus = document.querySelectorAll('.submenu');
+        const allLinks = document.querySelectorAll('.nav-link');
+        
+        // 关闭其他子菜单
+        allSubmenus.forEach(menu => {
+            if (menu !== submenu && menu.classList.contains('show')) {
+                menu.classList.remove('show');
+            }
+        });
+        
+        // 移除其他链接的expanded状态
+        allLinks.forEach(link => {
+            if (link !== linkElement && link.classList.contains('expanded')) {
+                link.classList.remove('expanded');
+            }
+        });
+        
+        // 切换当前子菜单
+        if (submenu) {
+            submenu.classList.toggle('show');
+            linkElement.classList.toggle('expanded');
+        }
+    }
+
+    // AJAX加载内容
+    function loadContent(url, title) {
+        const mainContent = document.getElementById('mainContent');
+
+        fetch(url, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'text/html',
+                'X-Requested-With': 'XMLHttpRequest'  // 标识这是一个AJAX请求
+            }
+        })
+            .then(response => {
+                if (!response.ok) {
+                    // 不跨级，改为在同一页面显示错误
+                    mainContent.innerHTML = `
+                    <div class="error-alert" style="background: linear-gradient(135deg, #FFE6E6 0%, #FFF0F0 100%); border-left: 5px solid #DC3545; border-radius: 8px; padding: 30px; margin: 20px;">
+                        <h3 style="color: #DC3545; font-size: 22px; font-weight: 600; margin-bottom: 15px;">功能暂未开放</h3>
+                        <p style="color: #6B7280; font-size: 14px; line-height: 1.6; margin-bottom: 20px;">抱歉，您访问的功能暂时不可用或还在开发中，请稍后再试。</p>
+                    </div>
+                `;
+                    return null;
+                }
+                return response.text();
+            })
+            .then(html => {
+                if (!html) return;
+
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+
+                // 移除不需要的元素
+                const sidebar = doc.querySelector('.sidebar');
+                const toggleBtn = doc.querySelector('.toggle-sidebar-btn');
+                if (sidebar) sidebar.remove();
+                if (toggleBtn) toggleBtn.remove();
+
+                // 获取主要内容
+                let contentElement = doc.querySelector('.main-content') ||
+                    doc.querySelector('.container-fluid') ||
+                    doc.querySelector('.card') ||
+                    doc.body;
+
+                if (contentElement) {
+                    mainContent.innerHTML = contentElement.innerHTML;
+                }
+
+                // 提取并执行脚本
+                const scripts = doc.querySelectorAll('script');
+                scripts.forEach(script => {
+                    const newScript = document.createElement('script');
+                    newScript.textContent = script.textContent;
+                    document.head.appendChild(newScript);
+                    document.head.removeChild(newScript);
+                });
+
+                // 如果是排班页面，强制初始化
+                if (url.includes('/schedule/overall')) {
+                    console.log('检测到排班页面，触发初始化');
+                    setTimeout(() => {
+                        if (typeof initSchedulePage === 'function') {
+                            initSchedulePage();
+                        } else if (typeof window.loadDepartments === 'function') {
+                            window.loadDepartments();
+                        }
+                    }, 500);
+                }
+                // 如果是科室统计页面，初始化扇形图与列表
+                if (url.includes('/admin/departments/stats-page')) {
+                    setTimeout(() => {
+                        if (typeof window.loadDepartmentStats === 'function') {
+                            window.loadDepartmentStats();
+                        }
+                        if (typeof window.loadDepartmentButtons === 'function') {
+                            window.loadDepartmentButtons();
+                        }
+                    }, 100);
+                }
+            })
+            .catch(error => {
+                console.error('加载失败:', error);
+                mainContent.innerHTML = `
+                <div class="error-alert" style="background: linear-gradient(135deg, #FFE6E6 0%, #FFF0F0 100%); border-left: 5px solid #DC3545; border-radius: 8px; padding: 30px; margin: 20px;">
+                    <h3 style="color: #DC3545; font-size: 22px; font-weight: 600; margin-bottom: 15px;">加载失败</h3>
+                    <p style="color: #6B7280; font-size: 14px; line-height: 1.6;">抱歉，载入内容时发生错误，请稍后再试。</p>
+                </div>
+            `;
+            });
+    }   //hsy加
+    // 加载医生列表
+    <!-- ... existing code ... -->
+    // 加载医生列表
+    function loadDoctors() {
+        loadContent('/admin/doctors', '医生列表');
+    }
+
+    // 加载创建医生页面
+    function loadCreateDoctor() {
+        loadContent('/admin/create-doctor', '创建医生');
+    }
+
+    // 其他函数保持不变...
+    <!-- ... existing code ... -->
+    // 全局函数：加载患者列表
+    function loadPatients(searchName = '') {
+        console.log('加载患者列表，搜索词:', searchName);
+
+        // 显示加载中
+        document.getElementById('mainContent').innerHTML = `
+        <div class="dashboard-header">
+            <div>
+                <h1>患者管理</h1>
+                <p>管理医院的所有患者信息</p>
+            </div>
+            <div class="header-actions">
+                <button class="btn btn-outline-custom" onclick="location.href='/admin/profile'">
+                    <i class="fas fa-cog"></i> 设置
+                </button>
+                <button class="btn btn-primary-custom" onclick="location.href='/logout'">
+                    <i class="fas fa-sign-out-alt"></i> 退出
+                </button>
+            </div>
+        </div>
+        <div class="card mt-4">
+            <div class="card-body text-center">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">加载中...</span>
+                </div>
+                <p class="mt-2">正在加载患者数据...</p>
+            </div>
+        </div>
+    `;
+
+        // 构建请求URL
+        let url = '/admin/patients/ajax';
+        if (searchName && searchName.trim() !== '') {
+            url += '?name=' + encodeURIComponent(searchName);
+        }
+
+        // 发送AJAX请求
+        fetch(url)
+            .then(response => response.text())
+            .then(html => {
+                document.getElementById('mainContent').innerHTML = `
+                <div class="dashboard-header">
+                    <div>
+                        <h1>患者管理</h1>
+                        <p>管理医院的所有患者信息</p>
+                    </div>
+                    <div class="header-actions">
+                        <button class="btn btn-outline-custom" onclick="location.href='/admin/profile'">
+                            <i class="fas fa-cog"></i> 设置
+                        </button>
+                        <button class="btn btn-primary-custom" onclick="location.href='/logout'">
+                            <i class="fas fa-sign-out-alt"></i> 退出
+                        </button>
+                    </div>
+                </div>
+                <div class="mt-4" id="patient-container">${html}</div>
+            `;
+            })
+            .catch(error => {
+                console.error('加载失败:', error);
+                document.getElementById('mainContent').innerHTML = `
+                <div class="dashboard-header">
+                    <div>
+                        <h1>患者管理</h1>
+                        <p>管理医院的所有患者信息</p>
+                    </div>
+                </div>
+                <div class="alert alert-danger mt-4">
+                    <i class="fas fa-exclamation-triangle me-2"></i>加载失败：${error.message}
+                </div>
+            `;
+            });
+    }
+
+    // 搜索患者
+    function searchPatients() {
+        const searchInput = document.getElementById('patient-search-input');
+        if (searchInput) {
+            loadPatients(searchInput.value);
+        }
+    }
+
+    // 清除搜索
+    function clearSearch() {
+        const searchInput = document.getElementById('patient-search-input');
+        if (searchInput) {
+            searchInput.value = '';
+            loadPatients('');
+        }
+    }
+    function loadPatients(searchName = '') {
+        let url = '/admin/patients?ajax=true';
+        if (searchName) {
+            url += '&name=' + encodeURIComponent(searchName);
+        }
+
+        fetch(url)
+            .then(response => response.text())
+            .then(html => {
+                document.getElementById('mainContent').innerHTML = html;
+            })
+            .catch(error => {
+                console.error('加载失败:', error);
+                alert('加载失败: ' + error.message);
+            });
+    }
+
+    function initDashboardCharts() {
+        const trendSelect = document.getElementById('trendRangeSelect');
+        const trendCanvas = document.getElementById('trendChart');
+        if (trendSelect && trendCanvas) {
+            const initDays = parseInt(trendSelect.value, 10) || 7;
+            updateTrendChart(initDays);
+            updateAgeDistribution(initDays);
+            trendSelect.addEventListener('change', () => {
+                const days = parseInt(trendSelect.value, 10) || 7;
+                updateTrendChart(days);
+                updateAgeDistribution(days);
+            });
+        }
+    }
+
+    function updateAgeDistribution(days) {
+        fetch('/admin/dashboard/age-distribution?days=' + encodeURIComponent(days))
+            .then(r => r.ok ? r.json() : [])
+            .then(data => {
+                const labelsRaw = data.map(d => d.label);
+                const counts = data.map(d => d.count);
+                const total = counts.reduce((s, v) => s + (v || 0), 0);
+                const el = document.getElementById('ageDonutChart');
+                if (!el) return;
+                const parent = el.parentElement;
+                if (total === 0) {
+                    parent.innerHTML = '';
+                    const placeholder = document.createElement('div');
+                    placeholder.className = 'text-muted text-center';
+                    placeholder.style.padding = '40px 0';
+                    placeholder.textContent = '暂无患者年龄数据';
+                    parent.appendChild(placeholder);
+                    window.ageDonutChartInstance = null;
+                    return;
+                }
+                const ctx = el.getContext('2d');
+                const labels = labelsRaw.map((l, i) => {
+                    const pct = total > 0 ? Math.round((counts[i] / total) * 1000) / 10 : 0;
+                    return `${l}（${pct}%）`;
+                });
+                const dataset = {
+                    data: counts,
+                    backgroundColor: ['#5B8FF9', '#61DDAA', '#65789B', '#F6BD16', '#7262FD', '#78D3F8', '#F6903D']
+                };
+                if (window.ageDonutChartInstance) {
+                    window.ageDonutChartInstance.data.labels = labels;
+                    window.ageDonutChartInstance.data.datasets[0].data = counts;
+                    window.ageDonutChartInstance.update();
+                    return;
+                }
+                window.ageDonutChartInstance = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: { labels: labels, datasets: [dataset] },
+                    options: {
+                        responsive: true,
+                        plugins: { 
+                            legend: { position: 'bottom' },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const idx = context.dataIndex;
+                                        const value = counts[idx] || 0;
+                                        const pct = total > 0 ? Math.round((value / total) * 1000) / 10 : 0;
+                                        return `${labelsRaw[idx]}：${value}人（${pct}%）`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            });
+    }
+
+    function updateTrendChart(days) {
+        fetch('/admin/dashboard/appointment-trend?days=' + encodeURIComponent(days))
+            .then(r => r.ok ? r.json() : [])
+            .then(data => {
+                const labels = data.map(d => d.date);
+                const totals = data.map(d => d.total || 0);
+                const pendings = data.map(d => d.pending || 0);
+                const canceled = data.map(d => d.canceled || 0);
+                const confirmed = data.map(d => d.confirmed || 0);
+                const maxCount = Math.max(
+                    totals.length ? Math.max(...totals) : 0,
+                    pendings.length ? Math.max(...pendings) : 0,
+                    canceled.length ? Math.max(...canceled) : 0,
+                    confirmed.length ? Math.max(...confirmed) : 0
+                );
+                const el = document.getElementById('trendChart');
+                if (!el) return;
+                const ctx = el.getContext('2d');
+                const datasets = [
+                    {
+                        label: '总计',
+                        data: totals,
+                        borderColor: '#4F46E5',
+                        backgroundColor: 'rgba(79,70,229,0.15)',
+                        tension: 0.3,
+                        fill: false,
+                        pointRadius: 3,
+                        pointBackgroundColor: '#4F46E5'
+                    },
+                    {
+                        label: '待确认',
+                        data: pendings,
+                        borderColor: '#F6BD16',
+                        backgroundColor: 'rgba(246,189,22,0.15)',
+                        tension: 0.3,
+                        fill: false,
+                        pointRadius: 3,
+                        pointBackgroundColor: '#F6BD16'
+                    },
+                    {
+                        label: '已取消',
+                        data: canceled,
+                        borderColor: '#FF7070',
+                        backgroundColor: 'rgba(255,112,112,0.15)',
+                        tension: 0.3,
+                        fill: false,
+                        pointRadius: 3,
+                        pointBackgroundColor: '#FF7070'
+                    },
+                    {
+                        label: '已确认',
+                        data: confirmed,
+                        borderColor: '#61DDAA',
+                        backgroundColor: 'rgba(97,221,170,0.15)',
+                        tension: 0.3,
+                        fill: false,
+                        pointRadius: 3,
+                        pointBackgroundColor: '#61DDAA'
+                    }
+                ];
+                if (window.trendChartInstance) {
+                    window.trendChartInstance.data.labels = labels;
+                    window.trendChartInstance.data.datasets = datasets;
+                    if (window.trendChartInstance.options && window.trendChartInstance.options.scales && window.trendChartInstance.options.scales.y) {
+                        window.trendChartInstance.options.scales.y.suggestedMax = maxCount < 5 ? 5 : maxCount;
+                        window.trendChartInstance.options.scales.y.ticks = Object.assign(
+                            {},
+                            window.trendChartInstance.options.scales.y.ticks || {},
+                            { stepSize: 1 }
+                        );
+                    }
+                    window.trendChartInstance.update();
+                    return;
+                }
+                window.trendChartInstance = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: datasets
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: { legend: { display: true, position: 'top' } },
+                        scales: { 
+                            y: { 
+                                beginAtZero: true,
+                                suggestedMax: maxCount < 5 ? 5 : maxCount,
+                                title: { display: true, text: '患者人数' },
+                                ticks: { stepSize: 1 }
+                            },
+                            x: {
+                                title: { display: true, text: '时间' }
+                            }
+                        }
+                    }
+                });
+            });
+    }
+
+    document.addEventListener('DOMContentLoaded', initDashboardCharts);
+
+    // 加载患者列表
+    function loadPatients(searchName = '') {
+        let url = '/admin/patients?ajax=true';
+        if (searchName) {
+            url += '&name=' + encodeURIComponent(searchName);
+        }
+
+        fetch(url)
+            .then(response => response.text())
+            .then(html => {
+                document.getElementById('mainContent').innerHTML = `
+                <div class="dashboard-header">
+                    <div>
+                        <h1>患者管理</h1>
+                        <p>管理医院的所有患者信息</p>
+                    </div>
+                    <div class="header-actions">
+                        <button class="btn btn-outline-custom" onclick="location.href='/admin/profile'">
+                            <i class="fas fa-cog"></i> 设置
+                        </button>
+                        <button class="btn btn-primary-custom" onclick="location.href='/logout'">
+                            <i class="fas fa-sign-out-alt"></i> 退出
+                        </button>
+                    </div>
+                </div>
+                <div class="mt-4" id="patient-content-container">${html}</div>
+            `;
+
+                // 绑定查看按钮的点击事件
+                setTimeout(bindPatientDetailButtons, 100);
+            })
+            .catch(error => {
+                console.error('加载失败:', error);
+            });
+    }
+
+    // 绑定患者详情按钮事件
+    function bindPatientDetailButtons() {
+        // 为所有查看按钮绑定点击事件
+        const buttons = document.querySelectorAll('.patient-detail-btn');
+        buttons.forEach(button => {
+            button.addEventListener('click', function() {
+                showPatientDetail(this);
+            });
+        });
+    }
+
+    // 显示患者详情
+    function showPatientDetail(button) {
+        console.log('显示患者详情');
+
+        // 从data属性获取数据
+        const name = button.getAttribute('data-name') || '未设置';
+        const lastLogin = button.getAttribute('data-last-login') || '未设置';
+        const status = button.getAttribute('data-status') || '未设置';
+
+        console.log('获取到的数据:', { name, lastLogin, status });
+
+        // 更新模态框内容
+        document.getElementById('modalPatientName').textContent = name;
+        document.getElementById('modalLastLoginTime').textContent = lastLogin;
+        document.getElementById('modalStatus').textContent = status;
+
+        // 根据状态设置颜色
+        const statusElement = document.getElementById('modalStatus');
+        statusElement.classList.remove('text-success', 'text-warning', 'text-danger', 'text-secondary');
+
+        if (status === 'ACTIVE' || status === '正常') {
+            statusElement.classList.add('text-success');
+        } else if (status === 'INACTIVE') {
+            statusElement.classList.add('text-warning');
+        } else if (status === 'LOCKED') {
+            statusElement.classList.add('text-danger');
+        } else {
+            statusElement.classList.add('text-secondary');
+        }
+
+        // 显示模态框
+        const modal = new bootstrap.Modal(document.getElementById('patientDetailModal'));
+        modal.show();
+    }
+
+    // 搜索患者（在patient-table.html中使用）
+    function searchPatients() {
+        const input = document.getElementById('patient-search-input');
+        if (input) {
+            loadPatients(input.value);
+        }
+    }
+
+    // 清除搜索
+    function clearSearch() {
+        const input = document.getElementById('patient-search-input');
+        if (input) {
+            input.value = '';
+            loadPatients('');
+        }
+    }
+    window.openPatientRecordsModal = function(patientId) {
+        const listEl = document.getElementById('recordsList');
+        const detailEl = document.getElementById('recordDetail');
+        if (listEl) listEl.innerHTML = '';
+        if (detailEl) detailEl.innerHTML = '';
+        fetch('/admin/api/patients/' + encodeURIComponent(patientId) + '/medical-records')
+            .then(r => r.ok ? r.json() : [])
+            .then(data => {
+                if (listEl) {
+                    listEl.innerHTML = '';
+                    if (!Array.isArray(data) || data.length === 0) {
+                        listEl.innerHTML = '<li class="list-group-item text-muted">暂无病历记录</li>';
+                    } else {
+                        data.forEach(item => {
+                            const li = document.createElement('li');
+                            li.className = 'list-group-item d-flex justify-content-between align-items-center';
+                            const left = document.createElement('div');
+                            left.innerHTML = '<div class="fw-bold">' + (item.diagnosis || '未填写诊断') + '</div>' +
+                                '<div class="text-muted small">' + (item.visitDate || '') + ' · ' +
+                                (item.doctorName || '') + ' · ' + (item.departmentName || '') + '</div>';
+                            const btn = document.createElement('button');
+                            btn.className = 'btn btn-sm btn-outline-primary';
+                            btn.textContent = '查看';
+                            btn.onclick = function() { window.viewRecordDetail(item.id); };
+                            li.appendChild(left);
+                            li.appendChild(btn);
+                            listEl.appendChild(li);
+                        });
+                    }
+                }
+                const modalEl = document.getElementById('patientRecordsModal');
+                if (modalEl) {
+                    const modal = new bootstrap.Modal(modalEl);
+                    modal.show();
+                }
+            });
+    }
+    window.viewRecordDetail = function(recordId) {
+        const el = document.getElementById('recordDetail');
+        if (el) el.innerHTML = '<div class="text-muted">加载中...</div>';
+        fetch('/admin/api/medical-records/' + encodeURIComponent(recordId))
+            .then(r => r.ok ? r.json() : null)
+            .then(rec => {
+                if (!rec) {
+                    if (el) el.innerHTML = '<div class="text-danger">未找到记录</div>';
+                    return;
+                }
+                const html = [
+                    '<div class="mb-2"><span class="fw-bold">就诊日期：</span>' + (rec.visitDate || '') + '</div>',
+                    '<div class="mb-2"><span class="fw-bold">诊断：</span>' + (rec.diagnosis || '') + '</div>',
+                    '<div class="mb-2"><span class="fw-bold">主诉：</span>' + (rec.chiefComplaint || '') + '</div>',
+                    '<div class="mb-2"><span class="fw-bold">现病史：</span>' + (rec.presentIllness || '') + '</div>',
+                    '<div class="mb-2"><span class="fw-bold">既往史：</span>' + (rec.pastIllness || '') + '</div>',
+                    '<div class="mb-2"><span class="fw-bold">体格检查：</span>' + (rec.physicalExamination || '') + '</div>',
+                    '<div class="mb-2"><span class="fw-bold">辅助检查：</span>' + (rec.auxiliaryExamination || '') + '</div>',
+                    '<div class="mb-2"><span class="fw-bold">治疗方案：</span>' + (rec.treatmentPlan || '') + '</div>'
+                ].join('');
+                if (el) el.innerHTML = html;
+            });
+    }
+    // 在dashboard.html的JavaScript部分添加以下函数
+
+    // 加载医生列表
+    function loadDoctors(searchName = '') {
+        let url = '/admin/doctors?ajax=true';
+        if (searchName) {
+            url += '&name=' + encodeURIComponent(searchName);
+        }
+
+        fetch(url)
+            .then(response => response.text())
+            .then(html => {
+                document.getElementById('mainContent').innerHTML = `
+            <div class="dashboard-header">
+                <div>
+                    <h1>医生管理</h1>
+                    <p>管理医院的所有医生信息</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-outline-custom" onclick="location.href='/admin/profile'">
+                        <i class="fas fa-cog"></i> 设置
+                    </button>
+                    <button class="btn btn-primary-custom" onclick="location.href='/logout'">
+                        <i class="fas fa-sign-out-alt"></i> 退出
+                    </button>
+                </div>
+            </div>
+            <div class="mt-4" id="doctor-content-container">${html}</div>
+        `;
+
+                // 绑定查看按钮的点击事件
+                setTimeout(bindDoctorDetailButtons, 100);
+            })
+            .catch(error => {
+                console.error('加载失败:', error);
+            });
+    }
+
+    // 绑定医生详情按钮事件
+    function bindDoctorDetailButtons() {
+        // 为所有查看按钮绑定点击事件
+        const buttons = document.querySelectorAll('.doctor-detail-btn');
+        buttons.forEach(button => {
+            button.addEventListener('click', function() {
+                showDoctorDetail(this);
+            });
+        });
+    }
+
+    // 显示医生详情
+    function showDoctorDetail(button) {
+        console.log('显示医生详情');
+
+        // 从data属性获取数据
+        const name = button.getAttribute('data-name') || '未设置';
+        const phoneBound = button.getAttribute('data-phone-bound') || '未设置';
+        const title = button.getAttribute('data-title') || '未设置';
+
+        console.log('获取到的数据:', { name, phoneBound, title });
+
+        // 更新模态框内容
+        document.getElementById('modalDoctorName').textContent = name;
+        document.getElementById('modalPhoneBound').textContent = phoneBound;
+        document.getElementById('modalTitle').textContent = title;
+
+        // 根据绑定状态设置颜色
+        const phoneBoundElement = document.getElementById('modalPhoneBound');
+        phoneBoundElement.classList.remove('text-success', 'text-warning', 'text-danger', 'text-secondary');
+
+        if (phoneBound === '已绑定') {
+            phoneBoundElement.classList.add('text-success');
+        } else {
+            phoneBoundElement.classList.add('text-warning');
+        }
+
+        // 显示模态框
+        const modal = new bootstrap.Modal(document.getElementById('doctorDetailModal'));
+        modal.show();
+    }
+
+    // 搜索医生
+    function searchDoctors() {
+        const input = document.getElementById('doctor-search-input');
+        if (input) {
+            // 这里需要调用加载医生的函数，可能需要创建一个新的函数
+            let searchValue = input.value;
+            loadDoctors(searchValue);
+        }
+    }
+
+    // 清除医生搜索
+    function clearDoctorSearch() {
+        const input = document.getElementById('doctor-search-input');
+        if (input) {
+            input.value = '';
+            loadDoctors('');
+        }
+    }
+    // 在dashboard.html的JavaScript部分添加以下函数
+
+    // 加载医生列表
+    function loadDoctors(searchName = '') {
+        let url = '/admin/doctors?ajax=true';
+        if (searchName) {
+            url += '&name=' + encodeURIComponent(searchName);
+        }
+
+        fetch(url)
+            .then(response => response.text())
+            .then(html => {
+                document.getElementById('mainContent').innerHTML = `
+            <div class="dashboard-header">
+                <div>
+                    <h1>医生管理</h1>
+                    <p>管理医院的所有医生信息</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-outline-custom" onclick="location.href='/admin/profile'">
+                        <i class="fas fa-cog"></i> 设置
+                    </button>
+                    <button class="btn btn-primary-custom" onclick="location.href='/logout'">
+                        <i class="fas fa-sign-out-alt"></i> 退出
+                    </button>
+                </div>
+            </div>
+            <div class="mt-4" id="doctor-content-container">${html}</div>
+        `;
+
+                // 绑定查看按钮的点击事件
+                setTimeout(bindDoctorDetailButtons, 100);
+            })
+            .catch(error => {
+                console.error('加载失败:', error);
+            });
+    }
+
+    // 绑定医生详情按钮事件
+    function bindDoctorDetailButtons() {
+        // 为所有查看按钮绑定点击事件
+        const buttons = document.querySelectorAll('.doctor-detail-btn');
+        buttons.forEach(button => {
+            // 移除可能已存在的事件监听器
+            const existingListener = button.getAttribute('data-listener-bound');
+            if (!existingListener) {
+                button.addEventListener('click', function() {
+                    showDoctorDetail(this);
+                });
+                button.setAttribute('data-listener-bound', 'true');
+            }
+        });
+    }
+
+    // 显示医生详情
+    function showDoctorDetail(button) {
+        console.log('显示医生详情');
+
+        // 从data属性获取数据
+        const name = button.getAttribute('data-name') || '未设置';
+        const phoneBound = button.getAttribute('data-phone-bound') || '未设置';
+        const title = button.getAttribute('data-title') || '未设置';
+
+        console.log('获取到的数据:', { name, phoneBound, title });
+
+        // 更新模态框内容
+        document.getElementById('modalDoctorName').textContent = name;
+        document.getElementById('modalPhoneBound').textContent = phoneBound;
+        document.getElementById('modalTitle').textContent = title;
+
+        // 根据绑定状态设置颜色
+        const phoneBoundElement = document.getElementById('modalPhoneBound');
+        phoneBoundElement.classList.remove('text-success', 'text-warning', 'text-danger', 'text-secondary');
+
+        if (phoneBound === '已绑定') {
+            phoneBoundElement.classList.add('text-success');
+        } else {
+            phoneBoundElement.classList.add('text-warning');
+        }
+
+        // 显示模态框
+        const modal = new bootstrap.Modal(document.getElementById('doctorDetailModal'));
+        modal.show();
+    }
+
+    // 搜索医生
+    function searchDoctors() {
+        const input = document.getElementById('doctor-search-input');
+        if (input) {
+            loadDoctors(input.value);
+        }
+    }
+
+    // 清除医生搜索
+    function clearDoctorSearch() {
+        const input = document.getElementById('doctor-search-input');
+        if (input) {
+            input.value = '';
+            loadDoctors('');
+        }
+    }
+    // 重置医生密码（全局），供医生列表片段调用
+    window.resetDoctorPassword = function(doctorId) {
+        if (!doctorId) return;
+        if (!confirm('确认将该医生密码重置为 123456 ？')) return;
+        fetch('/admin/doctors/' + encodeURIComponent(doctorId) + '/reset-password', {
+            method: 'POST'
+        })
+        .then(r => r.ok ? r.json() : Promise.reject(r))
+        .then(res => {
+            if (res && res.success) {
+                alert('密码重置成功：123456');
+                const input = document.getElementById('doctor-search-input');
+                const q = input ? input.value : '';
+                loadDoctors(q || '');
+            } else {
+                alert('重置失败');
+            }
+        })
+        .catch(async (err) => {
+            try {
+                const text = await err.text();
+                alert('重置失败：' + text);
+            } catch (e) {
+                alert('重置失败');
+            }
+        });
+    };
+</script>
+</body>
+</html>

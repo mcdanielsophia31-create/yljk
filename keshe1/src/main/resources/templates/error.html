@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>功能不可用 - 医疗健康管理系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" th:href="@{/css/unified-style.css}">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Microsoft YaHei', 'Segoe UI', Arial, sans-serif;
+            background-color: #F5F7FA;
+            overflow-x: hidden;
+        }
+        
+        /* ============ 左侧侧边栏 ============ */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            width: 260px;
+            box-shadow: 3px 0 15px rgba(0, 0, 0, 0.08);
+            z-index: 1000;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+        
+        /* Admin侧边栏 - 黑色主题 */
+        .sidebar.admin-sidebar {
+            background: linear-gradient(135deg, #1F2937 0%, #111827 100%);
+        }
+        
+        /* Doctor侧边栏 - 绿色主题 */
+        .sidebar.doctor-sidebar {
+            background: linear-gradient(135deg, #E6F4FF 0%, #FFFFFF 100%);
+        }
+        
+        /* Patient侧边栏 - 绿色主题 */
+        .sidebar.patient-sidebar {
+            background: linear-gradient(135deg, #E6F4FF 0%, #FFFFFF 100%);
+        }
+        
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .sidebar::-webkit-scrollbar-thumb {
+            background: rgba(79, 70, 229, 0.3);
+            border-radius: 3px;
+        }
+        
+        .sidebar-header {
+            padding: 25px 20px;
+            text-align: center;
+            border-bottom: 1px solid rgba(79, 70, 229, 0.1);
+        }
+        
+        /* Admin主题 */
+        .sidebar.admin-sidebar .sidebar-header {
+            border-bottom: 1px solid rgba(79, 70, 229, 0.1);
+        }
+        
+        /* Doctor/Patient主题 */
+        .sidebar.doctor-sidebar .sidebar-header,
+        .sidebar.patient-sidebar .sidebar-header {
+            border-bottom: 1px solid rgba(0, 123, 255, 0.1);
+        }
+        
+        .sidebar-header .user-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 12px;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        
+        /* Admin头像 - 紫蓝色 */
+        .sidebar.admin-sidebar .user-avatar {
+            background: linear-gradient(135deg, #4F46E5, #7C3AED);
+        }
+        
+        /* Doctor/Patient头像 - 绿色 */
+        .sidebar.doctor-sidebar .user-avatar,
+        .sidebar.patient-sidebar .user-avatar {
+            background: linear-gradient(135deg, #36B37E, #00A3BF);
+        }
+        
+        .sidebar-header h5 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        /* Admin主题 */
+        .sidebar.admin-sidebar .sidebar-header h5 {
+            color: #FFFFFF;
+        }
+        
+        /* Doctor/Patient主题 */
+        .sidebar.doctor-sidebar .sidebar-header h5,
+        .sidebar.patient-sidebar .sidebar-header h5 {
+            color: #1A1A1A;
+        }
+        
+        .sidebar-header small {
+            font-size: 12px;
+        }
+        
+        /* Admin主题 */
+        .sidebar.admin-sidebar .sidebar-header small {
+            color: #D1D5DB;
+        }
+        
+        /* Doctor/Patient主题 */
+        .sidebar.doctor-sidebar .sidebar-header small,
+        .sidebar.patient-sidebar .sidebar-header small {
+            color: #6B7280;
+        }
+        
+        .sidebar-nav {
+            padding: 15px 0;
+        }
+        
+        .nav-item {
+            margin: 5px 15px;
+        }
+        
+        .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 14px 15px;
+            text-decoration: none;
+            border-radius: 10px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        /* Admin链接 */
+        .sidebar.admin-sidebar .nav-link {
+            color: #D1D5DB;
+        }
+        
+        .sidebar.admin-sidebar .nav-link:hover {
+            background: linear-gradient(90deg, rgba(79, 70, 229, 0.2) 0%, rgba(124, 58, 237, 0.2) 100%);
+            color: #A5F3FC;
+            transform: translateX(3px);
+        }
+        
+        /* Doctor/Patient链接 */
+        .sidebar.doctor-sidebar .nav-link,
+        .sidebar.patient-sidebar .nav-link {
+            color: #4B5563;
+        }
+        
+        .sidebar.doctor-sidebar .nav-link:hover,
+        .sidebar.patient-sidebar .nav-link:hover {
+            background: linear-gradient(90deg, rgba(54, 179, 126, 0.1) 0%, rgba(0, 163, 191, 0.1) 100%);
+            color: #36B37E;
+            transform: translateX(3px);
+        }
+        
+        .nav-link i {
+            min-width: 20px;
+            margin-right: 12px;
+            font-size: 16px;
+        }
+        
+        .user-info {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            padding: 15px;
+            border-top: 1px solid rgba(79, 70, 229, 0.1);
+            text-align: center;
+        }
+        
+        .user-info p {
+            font-size: 12px;
+            margin-bottom: 8px;
+        }
+        
+        /* Admin主题 */
+        .sidebar.admin-sidebar .user-info p {
+            color: #D1D5DB;
+        }
+        
+        /* Doctor/Patient主题 */
+        .sidebar.doctor-sidebar .user-info p,
+        .sidebar.patient-sidebar .user-info p {
+            color: #6B7280;
+        }
+        
+        .user-info a {
+            border: none !important;
+            color: white !important;
+        }
+        
+        /* Admin按钮 */
+        .sidebar.admin-sidebar .user-info a {
+            background: linear-gradient(135deg, #4F46E5, #7C3AED) !important;
+        }
+        
+        /* Doctor/Patient按钮 */
+        .sidebar.doctor-sidebar .user-info a,
+        .sidebar.patient-sidebar .user-info a {
+            background: linear-gradient(135deg, #36B37E, #00A3BF) !important;
+        }
+        
+        .user-info a:hover {
+            opacity: 0.9;
+        }
+        
+        /* ============ 主内容区域 ============ */
+        .main-content {
+            margin-left: 260px;
+            transition: margin-left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            min-height: 100vh;
+        }
+        
+        /* ============ 顶部导航栏 ============ */
+        .header {
+            background: linear-gradient(90deg, #FFFFFF 0%, #F8FCFF 100%);
+            border-bottom: 1px solid #E5EAEF;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header h2 {
+            font-size: 24px;
+            font-weight: 600;
+            color: #1A1A1A;
+            margin: 0;
+        }
+        
+        .header-actions {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .btn-outline-custom {
+            border: 2px solid;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        
+        /* Admin按钮 */
+        .sidebar.admin-sidebar ~ .main-content .btn-outline-custom {
+            border-color: #4F46E5;
+            color: #4F46E5;
+        }
+        
+        .sidebar.admin-sidebar ~ .main-content .btn-outline-custom:hover {
+            background: linear-gradient(135deg, #4F46E5, #7C3AED);
+            color: white;
+            border-color: transparent;
+        }
+        
+        /* Doctor/Patient按钮 */
+        .sidebar.doctor-sidebar ~ .main-content .btn-outline-custom,
+        .sidebar.patient-sidebar ~ .main-content .btn-outline-custom {
+            border-color: #36B37E;
+            color: #36B37E;
+        }
+        
+        .sidebar.doctor-sidebar ~ .main-content .btn-outline-custom:hover,
+        .sidebar.patient-sidebar ~ .main-content .btn-outline-custom:hover {
+            background: linear-gradient(135deg, #36B37E, #00A3BF);
+            color: white;
+            border-color: transparent;
+        }
+        
+        .btn-primary-custom {
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        
+        /* Admin主题 */
+        .sidebar.admin-sidebar ~ .main-content .btn-primary-custom {
+            background: linear-gradient(135deg, #4F46E5, #7C3AED);
+        }
+        
+        /* Doctor/Patient主题 */
+        .sidebar.doctor-sidebar ~ .main-content .btn-primary-custom,
+        .sidebar.patient-sidebar ~ .main-content .btn-primary-custom {
+            background: linear-gradient(135deg, #36B37E, #00A3BF);
+        }
+        
+        .btn-primary-custom:hover {
+            opacity: 0.9;
+            color: white;
+            text-decoration: none;
+        }
+        
+        /* ============ 错误提示区域 ============ */
+        .content-area {
+            padding: 30px;
+        }
+        
+        .error-alert {
+            background: linear-gradient(135deg, #FFE6E6 0%, #FFF0F0 100%);
+            border-left: 5px solid #DC3545;
+            border-radius: 8px;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .error-alert h3 {
+            color: #DC3545;
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+        
+        .error-alert p {
+            color: #6B7280;
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        
+        .error-actions {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .error-actions .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Admin侧边栏 -->
+    <div class="sidebar admin-sidebar" th:if="${userRole == 'admin'}">
+        <div class="sidebar-header">
+            <div class="user-avatar">
+                <i class="fas fa-user-shield"></i>
+            </div>
+            <h5>管理员</h5>
+            <small>医疗系统</small>
+        </div>
+        
+        <ul class="nav flex-column sidebar-nav">
+            <li class="nav-item">
+                <a class="nav-link" href="/admin/dashboard">
+                    <i class="fas fa-home"></i>
+                    <span class="nav-text">我的主页</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/admin/patients">
+                    <i class="fas fa-user-injured"></i>
+                    <span class="nav-text">患者管理</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/admin/doctors">
+                    <i class="fas fa-user-md"></i>
+                    <span class="nav-text">医生管理</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/admin/departments">
+                    <i class="fas fa-hospital"></i>
+                    <span class="nav-text">科室管理</span>
+                </a>
+            </li>
+        </ul>
+        
+        <div class="user-info">
+            <p><i class="fas fa-user-shield"></i> 管理员</p>
+            <a href="/logout" class="btn btn-outline-light btn-sm w-100">
+                <i class="fas fa-sign-out-alt"></i> 退出登录
+            </a>
+        </div>
+    </div>
+
+    <!-- Doctor侧边栏 -->
+    <div class="sidebar doctor-sidebar" th:if="${userRole == 'doctor'}">
+        <div class="sidebar-header">
+            <div class="user-avatar">
+                <i class="fas fa-user-md"></i>
+            </div>
+            <h5>医生用户</h5>
+            <small>医疗系统</small>
+        </div>
+        
+        <ul class="nav flex-column sidebar-nav">
+            <li class="nav-item">
+                <a class="nav-link" href="/doctor/dashboard">
+                    <i class="fas fa-home"></i>
+                    <span class="nav-text">我的主页</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/doctor/patients">
+                    <i class="fas fa-users"></i>
+                    <span class="nav-text">患者管理</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/doctor/medical-records">
+                    <i class="fas fa-file-medical"></i>
+                    <span class="nav-text">病历管理</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/doctor/appointments">
+                    <i class="fas fa-calendar-check"></i>
+                    <span class="nav-text">预约管理</span>
+                </a>
+            </li>
+        </ul>
+        
+        <div class="user-info">
+            <p><i class="fas fa-user-md"></i> 医生用户</p>
+            <a href="/logout" class="btn btn-outline-light btn-sm w-100">
+                <i class="fas fa-sign-out-alt"></i> 退出登录
+            </a>
+        </div>
+    </div>
+
+    <!-- Patient侧边栏 -->
+    <div class="sidebar patient-sidebar" th:if="${userRole == 'patient'}">
+        <div class="sidebar-header">
+            <div class="user-avatar">
+                <i class="fas fa-user"></i>
+            </div>
+            <h5>患者用户</h5>
+            <small>医疗系统</small>
+        </div>
+        
+        <ul class="nav flex-column sidebar-nav">
+            <li class="nav-item">
+                <a class="nav-link" href="/patient/dashboard">
+                    <i class="fas fa-home"></i>
+                    <span>我的主页</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/patient/profile">
+                    <i class="fas fa-user-circle"></i>
+                    <span>个人信息管理</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/patient/appointments">
+                    <i class="fas fa-calendar-check"></i>
+                    <span>预约挂号</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/patient/medical-records">
+                    <i class="fas fa-file-medical"></i>
+                    <span>病历查询</span>
+                </a>
+            </li>
+        </ul>
+        
+        <div class="user-info">
+            <p><i class="fas fa-user"></i> 患者用户</p>
+            <a href="/logout" class="btn btn-outline-light btn-sm w-100">
+                <i class="fas fa-sign-out-alt"></i> 退出登录
+            </a>
+        </div>
+    </div>
+
+    <!-- 主内容区域 -->
+    <div class="main-content">
+        <!-- 顶部导航栏 -->
+        <div class="header">
+            <h2><i class="fas fa-exclamation-circle me-2"></i>功能不可用</h2>
+            <div class="header-actions">
+                <button class="btn btn-outline-custom" onclick="goHome()">
+                    <i class="fas fa-home"></i> 返回主页
+                </button>
+                <button class="btn btn-primary-custom" onclick="location.href='/logout'">
+                    <i class="fas fa-sign-out-alt"></i> 退出
+                </button>
+            </div>
+        </div>
+        
+        <!-- 内容区域 -->
+        <div class="content-area">
+            <div class="error-alert">
+                <h3>功能暂未开放</h3>
+                <p>抱歉，您访问的功能暂时不可用或还在开发中，请稍后再试。</p>
+                <div class="error-actions">
+                    <a href="javascript:goHome()" class="btn btn-danger">
+                        <i class="fas fa-home"></i> 返回主页
+                    </a>
+                    <a href="javascript:history.back()" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> 返回上一页
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function goHome() {
+            const userRole = document.body.querySelector('.sidebar').className.includes('admin') ? 'admin' :
+                             document.body.querySelector('.sidebar').className.includes('doctor') ? 'doctor' : 'patient';
+            
+            if (userRole === 'admin') {
+                location.href = '/admin/dashboard';
+            } else if (userRole === 'doctor') {
+                location.href = '/doctor/dashboard';
+            } else {
+                location.href = '/patient/dashboard';
+            }
+        }
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

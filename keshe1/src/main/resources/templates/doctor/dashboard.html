@@ -1,0 +1,3012 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>医生工作站 - 医疗健康管理系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" th:href="@{/css/unified-style.css}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* 周次选择相关样式 */
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 2px;
+            margin-top: 10px;
+        }
+
+        .calendar-day {
+            padding: 5px;
+            text-align: center;
+            border: 1px solid #dee2e6;
+            cursor: pointer;
+            background-color: #fff;
+        }
+
+        .calendar-day.today {
+            background-color: #007bff;
+            color: white;
+            font-weight: bold;
+        }
+
+        .calendar-day.selected-week {
+            border: 2px solid #007bff;
+            font-weight: bold;
+        }
+
+        .calendar-day.fw-bold {
+            font-weight: bold;
+        }
+
+        .calendar-day.current-month {
+            color: #000;
+        }
+
+        .calendar-day.other-month {
+            color: #ccc;
+        }
+
+        .calendar-day.selected {
+            border: 2px solid #007bff;
+            border-radius: 4px;
+            background-color: #e7f3ff;
+        }
+
+        .table th, .table td {
+            vertical-align: middle !important;
+            padding: 0.25rem 0.25rem !important;
+        }
+
+        .schedule-cell.past {
+            background-color: #e9ecef;
+            color: #6c757d;
+        }
+
+        .schedule-cell.selected {
+            background-color: #d1ecf1;
+            border-color: #0c5460;
+        }
+
+        .schedule-cell.past.selected {
+            background-color: #d1ecf1 !important;
+            border-color: #0c5460;
+            color: inherit;
+        }
+
+        .schedule-cell.past.selected:hover {
+            background-color: #d1ecf1 !important;
+            border-color: #0c5460 !important;
+            color: inherit !important;
+        }
+
+        .schedule-cell:hover {
+            background-color: #d1ecf1 !important;
+            position: relative;
+            z-index: 1;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', 'Segoe UI', Arial, sans-serif;
+            background-color: #F5F7FA;
+            overflow-x: hidden;
+        }
+
+        /* ============ 左侧侧边栏 ============ */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            width: 260px;
+            background: linear-gradient(135deg, #E6F4FF 0%, #FFFFFF 100%);
+            box-shadow: 3px 0 15px rgba(0, 0, 0, 0.08);
+            z-index: 1000;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .sidebar.collapsed {
+            width: 70px;
+        }
+
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background: rgba(0, 123, 255, 0.3);
+            border-radius: 3px;
+        }
+
+        .sidebar-header {
+            padding: 25px 20px;
+            text-align: center;
+            border-bottom: 1px solid rgba(0, 123, 255, 0.1);
+            transition: all 0.3s;
+        }
+
+        .sidebar.collapsed .sidebar-header {
+            padding: 15px 5px;
+        }
+
+        .sidebar-header .user-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #36B37E, #00A3BF);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 12px;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .sidebar.collapsed .user-avatar {
+            width: 40px;
+            height: 40px;
+            font-size: 18px;
+        }
+
+        .sidebar-header h5 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1A1A1A;
+            margin-bottom: 5px;
+            transition: all 0.3s;
+        }
+
+        .sidebar.collapsed .sidebar-header h5,
+        .sidebar.collapsed .sidebar-header small {
+            display: none;
+        }
+
+        .sidebar-header small {
+            color: #6B7280;
+            font-size: 12px;
+        }
+
+        .sidebar-nav {
+            padding: 15px 0;
+        }
+
+        .nav-item {
+            margin: 5px 15px;
+        }
+
+        .sidebar.collapsed .nav-item {
+            margin: 5px 10px;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 14px 15px;
+            color: #4B5563;
+            text-decoration: none;
+            border-radius: 10px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 14px;
+            font-weight: 500;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .nav-link:hover {
+            background: linear-gradient(90deg, rgba(54, 179, 126, 0.1) 0%, rgba(0, 163, 191, 0.1) 100%);
+            color: #36B37E;
+            transform: translateX(3px);
+        }
+
+        .nav-link.active {
+            background: linear-gradient(90deg, #36B37E 0%, #00A3BF 100%);
+            color: #FFFFFF;
+            box-shadow: 0 4px 12px rgba(54, 179, 126, 0.3);
+        }
+
+        .nav-link i {
+            min-width: 20px;
+            margin-right: 12px;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        .sidebar.collapsed .nav-link i {
+            margin-right: 0;
+        }
+
+        .sidebar.collapsed .nav-link .nav-text {
+            display: none;
+        }
+
+        .nav-link .chevron {
+            margin-left: auto;
+            font-size: 12px;
+            transition: transform 0.3s;
+        }
+
+        .nav-link.expanded .chevron {
+            transform: rotate(180deg);
+        }
+
+        .submenu {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .submenu.show {
+            max-height: 500px;
+        }
+
+        .submenu .nav-link {
+            padding-left: 47px;
+            font-size: 13px;
+            color: #6B7280;
+        }
+
+        .sidebar.collapsed .submenu {
+            display: none;
+        }
+
+        .toggle-sidebar-btn {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #FFFFFF;
+            border: 2px solid #E6F4FF;
+            color: #36B37E;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            z-index: 10;
+        }
+
+        .toggle-sidebar-btn:hover {
+            background: #36B37E;
+            color: #FFFFFF;
+            box-shadow: 0 4px 12px rgba(54, 179, 126, 0.3);
+        }
+
+        /* ============ 主内容区域 ============ */
+        .main-content {
+            margin-left: 260px;
+            padding: 30px;
+            transition: margin-left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            min-height: 100vh;
+            padding-bottom: 100px;
+        }
+
+        .main-content.full-width {
+            margin-left: 70px;
+        }
+
+        .dashboard-header {
+            background: #FFFFFF;
+            border-radius: 16px;
+            padding: 28px 32px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+            margin-bottom: 28px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .dashboard-header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1A1A1A;
+            margin-bottom: 6px;
+        }
+
+        .dashboard-header p {
+            font-size: 14px;
+            color: #9CA3AF;
+            margin: 0;
+        }
+
+        .header-actions .btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+            margin-left: 10px;
+        }
+
+        .btn-primary-custom {
+            background: linear-gradient(135deg, #36B37E 0%, #00A3BF 100%);
+            border: none;
+            color: white;
+        }
+
+        .btn-primary-custom:hover {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 6px 20px rgba(54, 179, 126, 0.4);
+        }
+
+        .btn-outline-custom {
+            border: 2px solid #E5E7EB;
+            color: #6B7280;
+            background: white;
+        }
+
+        .btn-outline-custom:hover {
+            border-color: #36B37E;
+            color: #36B37E;
+            background: #F0FDF4;
+        }
+
+        /* ============ 卡片样式 ============ */
+        .card {
+            background: #FFFFFF;
+            border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            border: 1px solid #F3F4F6;
+            margin-bottom: 24px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .card:hover {
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+            transform: translateY(-4px);
+        }
+
+        .card-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid #F3F4F6;
+            background: transparent;
+        }
+
+        .card-header h5 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1A1A1A;
+            margin: 0;
+        }
+
+        .card-body {
+            padding: 24px;
+        }
+
+        /* 统计卡片 */
+        .stat-card {
+            text-align: center;
+            padding: 24px 16px;
+            background: linear-gradient(135deg, #FFFFFF 0%, #F9FAFB 100%);
+            border: 2px solid #E6F4FF;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(54, 179, 126, 0.1) 0, transparent 70%);
+            transition: all 0.5s;
+        }
+
+        .stat-card:hover::before {
+            top: -30%;
+            right: -30%;
+        }
+
+        .stat-card .icon {
+            font-size: 32px;
+            color: #36B37E;
+            margin-bottom: 12px;
+        }
+
+        .stat-card .number {
+            font-size: 32px;
+            font-weight: 700;
+            color: #1A1A1A;
+            margin-bottom: 8px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .stat-card .label {
+            font-size: 14px;
+            color: #6B7280;
+            font-weight: 500;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 70px;
+            }
+            .sidebar-header h5,
+            .sidebar-header small,
+            .nav-text,
+            .submenu {
+                display: none;
+            }
+            .main-content {
+                margin-left: 70px;
+            }
+        }
+    </style>
+</head>
+<body>
+<!-- 左侧侧边栏导航 -->
+<div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+        <div class="user-avatar" style="cursor: pointer;" onclick="location.href='/doctor/profile'" id="sidebarAvatar">
+            <span id="sidebarAvatarPlaceholder" th:text="${user != null ? user.realName.substring(0,1) : 'D'}">D</span>
+            <img id="sidebarAvatarImage" style="display: none; width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
+        </div>
+        <h5 id="sidebarUserName" th:text="${user != null ? user.realName : '医生用户'}">医生用户</h5>
+        <small id="sidebarUserEmpId" th:text="${user != null ? user.employeeId : '工号'}">工号</small>
+    </div>
+
+    <ul class="nav flex-column sidebar-nav">
+        <!-- 我的主页 -->
+        <li class="nav-item">
+            <a class="nav-link active" href="/doctor/dashboard">
+                <i class="fas fa-home"></i>
+                <span class="nav-text">我的主页</span>
+            </a>
+        </li>
+
+        <!-- 医生信息管理 -->
+        <li class="nav-item">
+            <a class="nav-link" href="#" onclick="toggleSubmenu(this); return false;">
+                <i class="fas fa-user-md"></i>
+                <span class="nav-text">医生信息管理</span>
+                <i class="fas fa-chevron-down chevron"></i>
+            </a>
+            <ul class="submenu">
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="loadDoctorProfileViewOnly(); return false;">
+                        <i class="fas fa-id-card"></i>
+                        <span class="nav-text">个人信息</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="loadDoctorScheduleView(); return false;">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span class="nav-text">我的排班</span>
+                    </a>
+                </li>
+            </ul>
+        </li>
+
+        <!-- 患者管理 -->
+        <li class="nav-item">
+            <a class="nav-link" href="#" onclick="toggleSubmenu(this); return false;">
+                <i class="fas fa-users"></i>
+                <span class="nav-text">患者管理</span>
+                <i class="fas fa-chevron-down chevron"></i>
+            </a>
+            <ul class="submenu">
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="loadContent('/doctor/medical-records-view', '电子病历'); return false;" id="nav-medical-records">
+                        <i class="fas fa-file-medical-alt"></i> <span class="nav-text">电子病历</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" onclick="loadContent('/doctor/examinations')">
+                        <i class="fas fa-file-medical-alt"></i> <span class="nav-text">检查报告</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" onclick="loadContent('/doctor/health-profiles', '健康档案'); return false;">
+                        <i class="fas fa-notes-medical"></i> <span class="nav-text">健康档案</span>
+                    </a>
+                </li>
+            </ul>
+        </li>
+
+        <!-- 预约管理 -->
+        <li class="nav-item">
+            <a class="nav-link" href="#" onclick="toggleSubmenu(this); return false;">
+                <i class="fas fa-calendar-check"></i>
+                <span class="nav-text">预约管理</span>
+                <i class="fas fa-chevron-down chevron"></i>
+            </a>
+            <ul class="submenu">
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="loadContent('/doctor/appointments', '预约列表'); return false;">
+                        <i class="fas fa-list"></i>
+                        <span class="nav-text">预约列表</span>
+                    </a>
+                </li>
+            </ul>
+        </li>
+    </ul>
+
+    <!-- 侧边栏折叠按钮 -->
+    <button class="toggle-sidebar-btn" onclick="toggleSidebar()" title="折叠/展开侧边栏">
+        <i class="fas fa-angles-left" id="toggleIcon"></i>
+    </button>
+</div>
+
+<!-- 主内容区域 -->
+<div class="main-content" id="mainContent">
+    <!-- 顶部标题栏 -->
+    <div class="dashboard-header">
+        <div>
+            <h1>医生工作站</h1>
+            <p>欢迎回来，<span th:text="${user != null ? user.realName : '医生用户'}">医生用户</span></p>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-outline-custom" onclick="location.href='/doctor/profile'">
+                <i class="fas fa-cog"></i> 设置
+            </button>
+            <button class="btn btn-primary-custom" onclick="location.href='/logout'">
+                <i class="fas fa-sign-out-alt"></i> 退出
+            </button>
+        </div>
+    </div>
+
+    <!-- 统计卡片部分 - 移除不必要的闭合div和添加更紧凑的间距 -->
+    <div class="row g-2 mb-3">  <!-- 改为 g-2 和 mb-3，减少间距 -->
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100" style="border-left: 4px solid #4e73df !important;">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-uppercase text-muted small fw-bold mb-1">今日挂号量</div>
+                            <div class="h3 mb-0 fw-bold text-gray-800" th:text="${stats.todayAppointments}">0</div>
+                        </div>
+                        <div class="icon-circle bg-primary bg-opacity-10 text-primary p-3 rounded-circle">
+                            <i class="fas fa-calendar-day fa-2x"></i>
+                        </div>
+                    </div>
+                    <div class="mt-2 small">
+                <span th:class="${stats.isTrendPositive} ? 'text-success fw-bold' : 'text-danger fw-bold'">
+                    <i th:class="${stats.isTrendPositive} ? 'fas fa-arrow-up' : 'fas fa-arrow-down'"></i>
+                    <span th:text="${stats.appointmentTrend}">0%</span>
+                </span>
+                        <span class="text-muted ms-1">较昨日</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100" style="border-left: 4px solid #f6c23e !important;">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-uppercase text-muted small fw-bold mb-1">待确诊患者</div>
+                            <div class="h3 mb-0 fw-bold text-gray-800" th:text="${stats.pendingAppointments}">0</div>
+                        </div>
+                        <div class="icon-circle bg-warning bg-opacity-10 text-warning p-3 rounded-circle">
+                            <i class="fas fa-clipboard-list fa-2x"></i>
+                        </div>
+                    </div>
+                    <div class="mt-2 small text-muted">
+                        当前积压任务
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100" style="border-left: 4px solid #1cc88a !important;">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-uppercase text-muted small fw-bold mb-1">本月接诊人次</div>
+                            <div class="h3 mb-0 fw-bold text-gray-800" th:text="${stats.monthlyVisits}">0</div>
+                        </div>
+                        <div class="icon-circle bg-success bg-opacity-10 text-success p-3 rounded-circle">
+                            <i class="fas fa-user-md fa-2x"></i>
+                        </div>
+                    </div>
+                    <div class="mt-2 small text-muted">
+                        本月累计绩效
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100" style="border-left: 4px solid #36b9cc !important;">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-uppercase text-muted small fw-bold mb-1">管理患者总数</div>
+                            <div class="h3 mb-0 fw-bold text-gray-800" th:text="${stats.totalPatients}">0</div>
+                        </div>
+                        <div class="icon-circle bg-info bg-opacity-10 text-info p-3 rounded-circle">
+                            <i class="fas fa-users fa-2x"></i>
+                        </div>
+                    </div>
+                    <div class="mt-2 small text-muted">
+                        历史累计接诊
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- 注意：这里移除了多余的 </div> -->
+
+    <div class="row mt-2"> <!-- 改为 mt-2，与上方更紧凑 -->
+        <div class="col-md-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-chart-bar text-primary me-2"></i>患者年龄段分布
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div style="height: 250px;">
+                        <canvas id="ageDistributionChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 引入Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script th:inline="javascript">
+    /**
+     * 辅助函数：手动执行容器中的 script 标签
+     * 解决 innerHTML 插入的 script 不执行的问题
+     */
+    function executeScripts(container) {
+        // 找到容器内所有的 script 标签
+        const scripts = container.querySelectorAll('script');
+
+        scripts.forEach(oldScript => {
+            // 创建一个新的 script 元素
+            const newScript = document.createElement('script');
+
+            // 复制属性 (如 src, type 等)
+            Array.from(oldScript.attributes).forEach(attr => {
+                newScript.setAttribute(attr.name, attr.value);
+            });
+
+            // 复制内容
+            newScript.textContent = oldScript.textContent;
+
+            // 将旧标签替换为新标签（这会触发浏览器执行脚本）
+            oldScript.parentNode.replaceChild(newScript, oldScript);
+        });
+    }
+
+    // ============ 全局函数定义 ============
+
+    // 子菜单折叠/展开
+    window.toggleSubmenu = function(linkElement) {
+        const submenu = linkElement.nextElementSibling;
+        const allSubmenus = document.querySelectorAll('.submenu');
+        const allLinks = document.querySelectorAll('.nav-link');
+
+        // 关闭其他子菜单
+        allSubmenus.forEach(menu => {
+            if (menu !== submenu && menu.classList.contains('show')) {
+                menu.classList.remove('show');
+            }
+        });
+
+        // 移除其他链接的expanded状态
+        allLinks.forEach(link => {
+            if (link !== linkElement && link.classList.contains('expanded')) {
+                link.classList.remove('expanded');
+            }
+        });
+
+        // 切换当前子菜单
+        if (submenu) {
+            submenu.classList.toggle('show');
+            linkElement.classList.toggle('expanded');
+        }
+    };
+
+    // 侧边栏折叠
+    function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const mainContent = document.getElementById('mainContent');
+        const toggleIcon = document.getElementById('toggleIcon');
+
+        sidebar.classList.toggle('collapsed');
+        mainContent.classList.toggle('full-width');
+
+        if (sidebar.classList.contains('collapsed')) {
+            toggleIcon.classList.remove('fa-angles-left');
+            toggleIcon.classList.add('fa-angles-right');
+        } else {
+            toggleIcon.classList.remove('fa-angles-right');
+            toggleIcon.classList.add('fa-angles-left');
+        }
+    }
+
+    // ============ 头像同步更新机制 ============
+
+    // 1. 加载医生侧边栏头像
+    function loadDashboardUserAvatar() {
+        fetch('/doctor/avatar/get', {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('网络响应错误');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    updateDashboardSidebarAvatar(data);
+                } else {
+                    console.error('获取头像失败:', data.message);
+                    // 使用默认头像
+                    showDefaultAvatar(data.defaultAvatar || 'D');
+                }
+            })
+            .catch(error => {
+                console.error('获取头像请求失败:', error);
+                // 显示默认头像
+                showDefaultAvatar('D');
+            });
+    }
+
+    // 2. 更新侧边栏头像
+    function updateDashboardSidebarAvatar(data) {
+        const sidebarAvatarPlaceholder = document.getElementById('sidebarAvatarPlaceholder');
+        const sidebarAvatarImage = document.getElementById('sidebarAvatarImage');
+        const sidebarUserName = document.getElementById('sidebarUserName');
+        const sidebarUserEmpId = document.getElementById('sidebarUserEmpId');
+
+        // 更新用户姓名
+        if (sidebarUserName && data.realName) {
+            sidebarUserName.textContent = data.realName;
+        }
+
+        // 更新工号（如果返回了工号信息）
+        if (sidebarUserEmpId && data.employeeId) {
+            sidebarUserEmpId.textContent = data.employeeId;
+        }
+
+        // 也更新只读页面中的头像（如果存在）
+        const readOnlyAvatarPlaceholder = document.getElementById('doctorAvatarPlaceholder');
+        const readOnlyAvatarImage = document.getElementById('doctorAvatarImage');
+        const readOnlyDisplayName = document.getElementById('doctorDisplayName');
+
+        if (readOnlyDisplayName && data.realName) {
+            readOnlyDisplayName.textContent = data.realName;
+        }
+
+        if (data.hasAvatar && data.avatarUrl) {
+            // 更新侧边栏头像
+            if (sidebarAvatarImage) {
+                sidebarAvatarImage.src = data.avatarUrl + '?t=' + new Date().getTime();
+                sidebarAvatarImage.style.display = 'block';
+            }
+            if (sidebarAvatarPlaceholder) {
+                sidebarAvatarPlaceholder.style.display = 'none';
+            }
+
+            // 更新只读页面头像
+            if (readOnlyAvatarImage) {
+                readOnlyAvatarImage.src = data.avatarUrl + '?t=' + new Date().getTime();
+                readOnlyAvatarImage.style.display = 'block';
+            }
+            if (readOnlyAvatarPlaceholder) {
+                readOnlyAvatarPlaceholder.style.display = 'none';
+            }
+
+            // 设置背景渐变
+            const avatarContainer = document.querySelector('.user-avatar');
+            if (avatarContainer) {
+                avatarContainer.style.background = 'none';
+            }
+        } else {
+            // 无头像：显示姓名首字母
+            showDefaultAvatar(data.defaultAvatar || 'D');
+
+            // 更新只读页面
+            if (readOnlyAvatarPlaceholder) {
+                readOnlyAvatarPlaceholder.textContent = data.defaultAvatar || '医';
+                readOnlyAvatarPlaceholder.style.display = 'flex';
+            }
+            if (readOnlyAvatarImage) {
+                readOnlyAvatarImage.style.display = 'none';
+            }
+        }
+    }
+
+    // 3. 显示默认头像（姓名首字母）
+    function showDefaultAvatar(initial) {
+        const sidebarAvatarPlaceholder = document.getElementById('sidebarAvatarPlaceholder');
+        const sidebarAvatarImage = document.getElementById('sidebarAvatarImage');
+        const avatarContainer = document.querySelector('.user-avatar');
+
+        sidebarAvatarImage.style.display = 'none';
+        sidebarAvatarPlaceholder.style.display = 'flex';
+        sidebarAvatarPlaceholder.textContent = initial;
+
+        // 确保有渐变背景
+        if (avatarContainer) {
+            avatarContainer.style.background = 'linear-gradient(135deg, #36B37E, #00A3BF)';
+        }
+    }
+
+    // 4. 页面加载完成后立即获取一次头像
+    document.addEventListener('DOMContentLoaded', function () {
+        // （1）. 基础日志
+        console.log("Dashboard页面加载完成");
+
+        // （2）. 初始化样式 (来自第一段代码)
+        // 确保头像容器有正确的 Flex 布局以居中显示
+        const userAvatar = document.querySelector('.user-avatar');
+        if (userAvatar) {
+            userAvatar.style.display = 'flex';
+            userAvatar.style.alignItems = 'center';
+            userAvatar.style.justifyContent = 'center';
+        }
+
+        const sidebarAvatarPlaceholder = document.getElementById('sidebarAvatarPlaceholder');
+        if (sidebarAvatarPlaceholder) {
+            sidebarAvatarPlaceholder.style.display = 'flex';
+            sidebarAvatarPlaceholder.style.alignItems = 'center';
+            sidebarAvatarPlaceholder.style.justifyContent = 'center';
+            sidebarAvatarPlaceholder.style.width = '100%';
+            sidebarAvatarPlaceholder.style.height = '100%';
+        }
+
+        // （3）. 执行业务逻辑
+        loadDashboardUserAvatar();  // 立即加载一次仪表板侧边栏头像
+
+        // （4）.定期检查头像更新（每30秒检查一次）
+        setInterval(() => {
+            loadDashboardUserAvatar();
+        }, 30000);
+    });
+
+    // （5）. 监听头像更新事件（当在profile页面更新头像后）
+    window.addEventListener('storage', function (e) {
+        if (e.key === 'avatarUpdated') {
+            console.log('检测到头像更新，重新加载头像');
+            loadDashboardUserAvatar();
+        }
+    });
+
+    // 7. 通用函数：更新所有位置的头像（用于全局同步）
+    function updateAllAvatars(data) {
+        // 1. 更新当前页面的侧边栏头像
+        updateDashboardSidebarAvatar(data);
+
+        // 2. 更新用户名
+        const sidebarUserName = document.getElementById('sidebarUserName');
+        if (sidebarUserName && data.realName) {
+            sidebarUserName.textContent = data.realName;
+        }
+
+        // 3. 更新顶部欢迎信息
+        const welcomeSpan = document.querySelector('.dashboard-header p span');
+        if (welcomeSpan && data.realName) {
+            welcomeSpan.textContent = data.realName;
+        }
+    }
+
+    // 加载医生个人信息（只读模式）
+    function loadDoctorProfileViewOnly() {
+        const mainContent = document.getElementById('mainContent');
+
+        // 显示加载状态
+        mainContent.innerHTML = `
+    <div class="d-flex justify-content-center align-items-center" style="min-height: 400px;">
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">加载中...</span>
+            </div>
+            <p class="mt-3 text-muted">正在加载医生信息...</p>
+        </div>
+    </div>
+`;
+
+        fetch('/doctor/profile', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'text/html',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('网络响应错误');
+                }
+                return response.text();
+            })
+            .then(html => {
+                // 解析HTML
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+
+                // 创建只读版本的医生个人信息页面
+                const readOnlyContent = createReadOnlyDoctorProfileView(doc);
+                mainContent.innerHTML = readOnlyContent;
+
+                // 立即加载头像
+                loadDashboardUserAvatar();
+
+                // 也重新加载仪表板的侧边栏头像
+                loadDashboardUserAvatar();
+
+            })
+            .catch(error => {
+                console.error('加载失败:', error);
+                mainContent.innerHTML = `
+            <div class="alert alert-danger" role="alert">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                加载医生信息失败，请稍后重试。
+            </div>
+        `;
+            });
+    }
+
+    // 创建只读版本的医生个人信息页面
+    function createReadOnlyDoctorProfileView(doc) {
+        // 创建临时容器
+        const tempDiv = document.createElement('div');
+
+        // 添加只读页面的样式容器
+        const styleContainer = document.createElement('div');
+        styleContainer.id = 'readonly-profile-container';
+
+        // 复制profile页面的样式
+        const originalStyles = doc.querySelectorAll('style');
+        originalStyles.forEach(originalStyle => {
+            const newStyle = document.createElement('style');
+            newStyle.textContent = originalStyle.textContent;
+            styleContainer.appendChild(newStyle);
+        });
+
+        // 添加只读容器的样式类
+        styleContainer.innerHTML += `
+    <style>
+        /* 只读模式下的额外样式 */
+        .readonly-profile {
+            background-color: #F5F7FA;
+            font-family: 'Microsoft YaHei', 'Segoe UI', Arial, sans-serif;
+        }
+
+        .readonly-profile .page-header {
+            background: linear-gradient(135deg, #36B37E 0%, #00A3BF 100%);
+            color: white;
+            padding: 25px 30px;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(54, 179, 126, 0.15);
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .readonly-profile .page-header h1 {
+            font-weight: 700;
+            margin-bottom: 5px;
+            font-size: 28px;
+        }
+
+        .readonly-profile .page-header p {
+            opacity: 0.9;
+            font-size: 14px;
+            margin: 0;
+        }
+
+        .readonly-profile .card {
+            border: none;
+            border-radius: 16px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+            margin-bottom: 25px;
+            overflow: hidden;
+        }
+
+        .readonly-profile .card-header {
+            background: white;
+            border-bottom: 2px solid #E6F4FF;
+            padding: 20px 30px;
+        }
+
+        .readonly-profile .card-header h5 {
+            margin: 0;
+            color: #1A1A1A;
+            font-weight: 600;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+        }
+
+        .readonly-profile .card-body {
+            padding: 30px;
+        }
+
+        .readonly-profile .avatar-section {
+            display: flex;
+            align-items: center;
+            gap: 30px;
+            margin-bottom: 20px;
+            padding: 20px;
+            background: linear-gradient(135deg, rgba(54, 179, 126, 0.05) 0%, rgba(0, 163, 191, 0.05) 100%);
+            border-radius: 16px;
+            border: 1px solid rgba(54, 179, 126, 0.1);
+        }
+
+        .readonly-profile .avatar-container {
+            position: relative;
+            width: 120px;
+            height: 120px;
+        }
+
+        .readonly-profile .avatar-display {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: 3px solid #36B37E;
+            overflow: hidden;
+            background: linear-gradient(135deg, #36B37E 0%, #00A3BF 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .readonly-profile .avatar-info {
+            flex: 1;
+        }
+
+        .readonly-profile .avatar-info h5 {
+            font-size: 20px;
+            font-weight: 600;
+            color: #1A1A1A;
+            margin-bottom: 8px;
+        }
+
+        .readonly-profile .avatar-info p {
+            font-size: 14px;
+            color: #6B7280;
+            margin-bottom: 0;
+        }
+
+        .readonly-profile .profile-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .readonly-profile .info-item {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid #E5E7EB;
+            transition: all 0.3s;
+        }
+
+        .readonly-profile .info-label {
+            font-weight: 600;
+            color: #374151;
+            font-size: 14px;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .readonly-profile .info-value {
+            color: #1F2937;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+
+        .readonly-profile .btn-group {
+            margin-top: 30px;
+            display: flex;
+            gap: 15px;
+        }
+
+        .readonly-profile .btn-primary-custom {
+            background: linear-gradient(135deg, #36B37E 0%, #00A3BF 100%);
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .readonly-profile .btn-outline-custom {
+            border: 2px solid #E5E7EB;
+            color: #6B7280;
+            background: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        @media (max-width: 768px) {
+            .readonly-profile .profile-info {
+                grid-template-columns: 1fr;
+            }
+
+            .readonly-profile .avatar-section {
+                flex-direction: column;
+                text-align: center;
+                gap: 20px;
+            }
+        }
+
+        .readonly-profile {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .readonly-profile .page-header {
+            margin: 0 0 30px 0;
+            padding: 25px 30px;
+        }
+
+        .readonly-profile .card {
+            margin: 0 0 30px 0;
+        }
+
+        .readonly-profile .profile-info {
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .readonly-profile .profile-info {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+`;
+
+        // 获取页面主要内容
+        const profileContainer = doc.querySelector('#profile-container');
+        if (!profileContainer) {
+            return '<div class="alert alert-warning">未找到医生信息</div>';
+        }
+
+        // 克隆内容
+        const clone = profileContainer.cloneNode(true);
+
+        // 添加只读类名
+        clone.classList.add('readonly-profile');
+
+        // 先将样式容器添加到tempDiv
+        tempDiv.appendChild(styleContainer);
+
+        // 然后将克隆的内容添加到tempDiv
+        tempDiv.appendChild(clone);
+
+        // 移除编辑按钮
+        const editButtons = tempDiv.querySelectorAll('#editProfileBtn, .btn-primary-custom[onclick*="edit"]');
+        editButtons.forEach(btn => btn.remove());
+
+        // 移除头像区域的相机按钮（在只读模式下不需要）
+        const avatarChangeBtn = tempDiv.querySelector('.avatar-upload-btn');
+        if (avatarChangeBtn) {
+            avatarChangeBtn.remove();
+        }
+
+        // 修改头像点击事件为查看大图（使用内联onclick事件）
+        const avatarDisplay = tempDiv.querySelector('#doctorAvatarDisplay');
+        if (avatarDisplay) {
+            avatarDisplay.style.cursor = 'pointer';
+            avatarDisplay.setAttribute('onclick', 'handleAvatarClickInReadonly()');
+        }
+
+        // 移除所有模态框
+        const modals = tempDiv.querySelectorAll('.profile-modal, .avatar-modal');
+        modals.forEach(modal => modal.remove());
+
+        // 移除脚本
+        const scripts = tempDiv.querySelectorAll('script');
+        scripts.forEach(script => script.remove());
+
+        // 找到头像区域并删除文字信息
+        const avatarSection = tempDiv.querySelector('.avatar-section');
+        if (avatarSection) {
+            // 删除整个avatar-info部分（包含姓名和职称）
+            const avatarInfo = tempDiv.querySelector('.avatar-info');
+            if (avatarInfo) {
+                avatarInfo.remove();
+            }
+
+            // 调整头像区域样式
+            avatarSection.style.justifyContent = 'center';
+            avatarSection.style.padding = '40px 20px';
+            avatarSection.style.minHeight = '200px';
+        }
+
+        // 添加只读模式提示
+        const readOnlyAlert = document.createElement('div');
+        readOnlyAlert.className = 'alert alert-info mb-4';
+        readOnlyAlert.innerHTML = `
+    <i class="fas fa-info-circle me-2"></i>
+    <strong>只读模式</strong> - 当前为信息查看模式。如需修改个人信息，请点击顶部"设置"按钮进入完整编辑页面。
+`;
+
+        // 插入到内容开头
+        const mainContent = tempDiv.querySelector('.main-content');
+        if (mainContent) {
+            mainContent.insertBefore(readOnlyAlert, mainContent.firstChild);
+        }
+
+        // 页面标题
+        const pageHeader = tempDiv.querySelector('.page-header');
+        if (pageHeader) {
+            const headerTitle = pageHeader.querySelector('h1');
+            if (headerTitle) {
+                headerTitle.innerHTML = '<i class="fas fa-user-md me-2"></i>我的信息（只读）';
+            }
+
+            // 修改返回按钮行为
+            const backButton = pageHeader.querySelector('button[onclick*="dashboard"]');
+            if (backButton) {
+                backButton.onclick = function () {
+                    // 恢复仪表板原始内容
+                    loadDashboardContent();
+                };
+            }
+
+            // 只读模式下不需要设置按钮
+            const logoutButton = pageHeader.querySelector('button[onclick*="logout"]');
+            if (logoutButton) {
+                logoutButton.remove();
+            }
+        }
+
+        // 移除编辑按钮组
+        const btnGroup = tempDiv.querySelector('.btn-group');
+        if (btnGroup) {
+            btnGroup.remove();
+        }
+
+        return tempDiv.innerHTML;
+    }
+
+    // 只读模式下的头像点击处理函数
+    function handleAvatarClickInReadonly() {
+        const avatarImg = document.getElementById('doctorAvatarImage');
+        const avatarPlaceholder = document.getElementById('doctorAvatarPlaceholder');
+
+        if (avatarImg && avatarImg.style.display !== 'none' && avatarImg.src) {
+            // 显示已上传的头像大图
+            showAvatarViewModal(avatarImg.src, '医生头像');
+        } else if (avatarPlaceholder) {
+            // 显示默认头像（只是显示提示）
+            showAvatarViewModal(null, '默认头像');
+        }
+    }
+
+    // 显示头像大图查看模态框
+    function showAvatarViewModal(src, alt) {
+        let modalContent = '';
+
+        if (src) {
+            modalContent = `
+            <div class="modal fade" id="avatarViewModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title"><i class="fas fa-user-circle me-2"></i>查看头像</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body text-center">
+                            <img src="${src}" alt="${alt}" class="img-fluid rounded-circle mb-3" style="max-width: 300px;">
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        } else {
+            modalContent = `
+            <div class="modal fade" id="avatarViewModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title"><i class="fas fa-user-circle me-2"></i>查看头像</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body text-center">
+                            <div class="mb-3">
+                                <div style="width: 150px; height: 150px; border-radius: 50%; background: linear-gradient(135deg, #36B37E, #00A3BF); display: flex; align-items: center; justify-content: center; margin: 0 auto;">
+                                    <span style="font-size: 48px; font-weight: bold; color: white;">医</span>
+                                </div>
+                            </div>
+                            <p class="text-muted">当前使用默认头像，请点击顶部"设置"按钮上传自定义头像。</p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        }
+
+        // 移除现有的模态框
+        const existingModal = document.getElementById('avatarViewModal');
+        if (existingModal) existingModal.remove();
+
+        // 添加新的模态框
+        document.body.insertAdjacentHTML('beforeend', modalContent);
+
+        // 显示模态框
+        const modal = new bootstrap.Modal(document.getElementById('avatarViewModal'));
+        modal.show();
+    }
+
+    // 加载仪表板原始内容（用于只读页面的返回功能）
+    function loadDashboardContent() {
+        const mainContent = document.getElementById('mainContent');
+
+        // 恢复仪表板的原始HTML结构
+        mainContent.innerHTML = `
+        <!-- 顶部标题栏 -->
+        <div class="dashboard-header">
+            <div>
+                <h1>医生工作站</h1>
+                <p>欢迎回来，<span th:text="${user != null ? user.realName : '医生用户'}">医生用户</span></p>
+            </div>
+            <div class="header-actions">
+                <button class="btn btn-outline-custom" onclick="location.href='/doctor/profile'">
+                    <i class="fas fa-cog"></i> 设置
+                </button>
+                <button class="btn btn-primary-custom" onclick="location.href='/logout'">
+                    <i class="fas fa-sign-out-alt"></i> 退出
+                </button>
+            </div>
+        </div>
+
+        <!-- 统计卡片 -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card stat-card">
+                    <div class="icon"><i class="fas fa-user-injured"></i></div>
+                    <div class="number" th:text="${patientCount != null ? patientCount : 0}">0</div>
+                    <div class="label">患者数量</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card">
+                    <div class="icon"><i class="fas fa-file-medical"></i></div>
+                    <div class="number" th:text="${medicalRecordCount != null ? medicalRecordCount : 0}">0</div>
+                    <div class="label">病历数量</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card">
+                    <div class="icon"><i class="fas fa-calendar-check"></i></div>
+                    <div class="number" th:text="${appointmentCount != null ? appointmentCount : 0}">0</div>
+                    <div class="label">预约数量</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card">
+                    <div class="icon"><i class="fas fa-stethoscope"></i></div>
+                    <div class="number" th:text="${diagnosisCount != null ? diagnosisCount : 0}">0</div>
+                    <div class="label">诊断数量</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 快速操作 -->
+        <div class="row mt-4 mb-4">
+            <div class="col-md-3">
+                <a href="/doctor/patients" class="btn btn-primary-custom w-100">
+                    <i class="fas fa-user-injured me-2"></i>查看患者
+                </a>
+            </div>
+            <div class="col-md-3">
+                <a href="/doctor/medical-records" class="btn btn-primary-custom w-100">
+                    <i class="fas fa-file-medical me-2"></i>查看病历
+                </a>
+            </div>
+            <div class="col-md-3">
+                <a href="/doctor/appointments" class="btn btn-primary-custom w-100">
+                    <i class="fas fa-calendar-check me-2"></i>查看预约
+                </a>
+            </div>
+            <div class="col-md-3">
+                <a href="/doctor/waiting-queue" class="btn btn-primary-custom w-100">
+                    <i class="fas fa-clock me-2"></i>候诊队列
+                </a>
+            </div>
+        </div>
+    `;
+    }
+
+    // 加载医生个人排班视图
+    function loadDoctorScheduleView() {
+        const mainContent = document.getElementById('mainContent');
+
+        // 构建排班页面的HTML内容
+        const schedulePageContent = `
+            <!-- 顶部标题栏 -->
+            <div class="dashboard-header">
+                <div>
+                    <h1>我的个人排班</h1>
+                    <p>&nbsp;</p> <!-- 空白占位，保持布局一致 -->
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-outline-custom" onclick="location.href='/doctor/profile'">
+                        <i class="fas fa-cog"></i> 设置
+                    </button>
+                    <button class="btn btn-primary-custom" onclick="location.href='/logout'">
+                        <i class="fas fa-sign-out-alt"></i> 退出
+                    </button>
+                </div>
+            </div>
+
+            <!-- 排班主内容区域 -->
+            <div class="card">
+                <div class="card-body">
+                    <!-- 上部分：头部区域，包含周次选择和导出功能 -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label">周次选择：</label>
+                            <div class="dropdown">
+                                <button class="btn btn-outline-secondary dropdown-toggle w-100" type="button" id="weekSelectorBtn" data-bs-toggle="dropdown" aria-expanded="false">
+                                    本周
+                                </button>
+                                <div class="dropdown-menu p-3" style="min-width: 400px;">
+                                    <div class="week-navigation">
+                                        <div class="text-center mb-2">
+                                            <button class="btn btn-sm btn-outline-primary me-2" id="prevWeekBtn">上周</button>
+                                            <button class="btn btn-sm btn-primary me-2" id="currentWeekBtn">本周</button>
+                                            <button class="btn btn-sm btn-outline-primary" id="nextWeekBtn">下周</button>
+                                        </div>
+                                        <div class="month-selector">
+                                            <div class="text-center mb-2">
+                                                <select class="d-inline-block w-auto me-2" id="yearSelector"></select>
+                                                年
+                                                <select class="d-inline-block w-auto mx-2" id="monthSelector">
+                                                    <option value="1">1月</option>
+                                                    <option value="2">2月</option>
+                                                    <option value="3">3月</option>
+                                                    <option value="4">4月</option>
+                                                    <option value="5">5月</option>
+                                                    <option value="6">6月</option>
+                                                    <option value="7">7月</option>
+                                                    <option value="8">8月</option>
+                                                    <option value="9">9月</option>
+                                                    <option value="10">10月</option>
+                                                    <option value="11">11月</option>
+                                                    <option value="12">12月</option>
+                                                </select>
+                                                月
+                                                <button class="btn btn-sm btn-outline-primary ms-2" id="jumpMonthBtn">跳转</button>
+                                            </div>
+                                            <div class="calendar-grid" id="calendarGrid">
+                                                <!-- 月历将通过JavaScript动态生成 -->
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 text-end">
+                            <div class="dropdown d-inline-block">
+                                <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="exportScheduleBtn" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-download"></i> 导出排班表
+                                </button>
+                                <ul class="dropdown-menu" aria-labelledby="exportScheduleBtn">
+                                    <li><a class="dropdown-item" href="#" onclick="exportSchedule('week')">所选周次排班表</a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="exportSchedule('month')">周次所在月份排班表</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 下部分：二行八列的周矩阵视图 -->
+                    <div class="row">
+                        <div class="col-12">
+                            <h5 class="card-title mb-4">排班详情</h5>
+                            <div class="table-responsive">
+                                <table class="table table-bordered" id="schedule-matrix" style="height: auto;">
+                                    <thead>
+                                        <tr class="text-center">
+                                            <th id="current-month" style="vertical-align: middle;">12月</th>
+                                            <th>
+                                                <div>周一</div>
+                                                <div id="date-mon">12日</div>
+                                            </th>
+                                            <th>
+                                                <div>周二</div>
+                                                <div id="date-tue">13日</div>
+                                            </th>
+                                            <th>
+                                                <div>周三</div>
+                                                <div id="date-wed">14日</div>
+                                            </th>
+                                            <th>
+                                                <div>周四</div>
+                                                <div id="date-thu">15日</div>
+                                            </th>
+                                            <th>
+                                                <div>周五</div>
+                                                <div id="date-fri">16日</div>
+                                            </th>
+                                            <th>
+                                                <div>周六</div>
+                                                <div id="date-sat">17日</div>
+                                            </th>
+                                            <th>
+                                                <div>周日</div>
+                                                <div id="date-sun">18日</div>
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr style="height: 60px;">
+                                            <th class="text-center vertical-text" style="writing-mode: vertical-lr; text-orientation: mixed; background-color: #f8f9fa; vertical-align: middle; height: 60px;">上午</th>
+                                            <td class="schedule-cell" id="mon-morning" data-date="" data-time="上午"></td>
+                                            <td class="schedule-cell" id="tue-morning" data-date="" data-time="上午"></td>
+                                            <td class="schedule-cell" id="wed-morning" data-date="" data-time="上午"></td>
+                                            <td class="schedule-cell" id="thu-morning" data-date="" data-time="上午"></td>
+                                            <td class="schedule-cell" id="fri-morning" data-date="" data-time="上午"></td>
+                                            <td class="schedule-cell" id="sat-morning" data-date="" data-time="上午"></td>
+                                            <td class="schedule-cell" id="sun-morning" data-date="" data-time="上午"></td>
+                                        </tr>
+                                        <tr style="height: 60px;">
+                                            <th class="text-center vertical-text" style="writing-mode: vertical-lr; text-orientation: mixed; background-color: #f8f9fa; vertical-align: middle; height: 60px;">下午</th>
+                                            <td class="schedule-cell" id="mon-afternoon" data-date="" data-time="下午"></td>
+                                            <td class="schedule-cell" id="tue-afternoon" data-date="" data-time="下午"></td>
+                                            <td class="schedule-cell" id="wed-afternoon" data-date="" data-time="下午"></td>
+                                            <td class="schedule-cell" id="thu-afternoon" data-date="" data-time="下午"></td>
+                                            <td class="schedule-cell" id="fri-afternoon" data-date="" data-time="下午"></td>
+                                            <td class="schedule-cell" id="sat-afternoon" data-date="" data-time="下午"></td>
+                                            <td class="schedule-cell" id="sun-afternoon" data-date="" data-time="下午"></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // 显示加载内容
+        mainContent.innerHTML = schedulePageContent;
+
+        // 初始化年份选择器 (当前年份前后10年)
+        const yearSelector = document.getElementById('yearSelector');
+        if (yearSelector && yearSelector.options.length === 0) {  // 只在选项为空时初始化
+            const currentYear = new Date().getFullYear();
+            for (let year = currentYear - 10; year <= currentYear + 10; year++) {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year;
+                if (year === currentYear) {
+                    option.selected = true;
+                }
+                yearSelector.appendChild(option);
+            }
+        }
+
+        // 初始化月份选择器
+        const monthSelector = document.getElementById('monthSelector');
+        if (monthSelector && monthSelector.options.length === 0) {  // 只在选项为空时初始化
+            const monthNames = ['1月', '2月', '3月', '4月', '5月', '6月',
+                '7月', '8月', '9月', '10月', '11月', '12月'];
+            for (let month = 0; month < 12; month++) {
+                const option = document.createElement('option');
+                option.value = month + 1;
+                option.textContent = monthNames[month];
+                if (month + 1 === new Date().getMonth() + 1) {
+                    option.selected = true;
+                }
+                monthSelector.appendChild(option);
+            }
+        }
+
+        // 初始化当前周
+        initializeCurrentWeek();
+
+        // 生成月历
+        generateCalendar();
+
+        // 绑定按钮事件
+        document.getElementById('prevWeekBtn') && document.getElementById('prevWeekBtn').addEventListener('click', function(e) {
+            e.stopPropagation();
+            const prevMonday = new Date(window.currentWeekStart);
+            prevMonday.setDate(prevMonday.getDate() - 7);
+            selectWeekForDate(prevMonday);
+        });
+
+        document.getElementById('currentWeekBtn') && document.getElementById('currentWeekBtn').addEventListener('click', function(e) {
+            e.stopPropagation();
+            selectWeekForDate(new Date());
+        });
+
+        document.getElementById('nextWeekBtn') && document.getElementById('nextWeekBtn').addEventListener('click', function(e) {
+            e.stopPropagation();
+            const nextMonday = new Date(window.currentWeekStart);
+            nextMonday.setDate(nextMonday.getDate() + 7);
+            selectWeekForDate(nextMonday);
+        });
+
+        document.getElementById('jumpMonthBtn') && document.getElementById('jumpMonthBtn').addEventListener('click', function(e) {
+            e.stopPropagation();
+
+            // 如果有选中的日期，则跳转到该日期所在的周
+            if (window.selectedDate) {
+                selectWeekForDate(window.selectedDate);
+
+                // 隐藏下拉菜单
+                const dropdownMenu = document.querySelector('.dropdown-menu.show');
+                if (dropdownMenu) {
+                    dropdownMenu.classList.remove('show');
+                }
+            } else {
+                // 如果没有选中日期，则重新生成当前月历
+                generateCalendar();
+            }
+        });
+
+        // 年月选择器变化事件
+        document.getElementById('yearSelector') && document.getElementById('yearSelector').addEventListener('change', function(e) {
+            e.stopPropagation();
+            generateCalendar();
+        });
+
+        document.getElementById('monthSelector') && document.getElementById('monthSelector').addEventListener('change', function(e) {
+            e.stopPropagation();
+            generateCalendar();
+        });
+
+        // 更新表格日期
+        updateWeekViewDates();
+
+        // 使用新的数据加载函数来加载排班数据
+        reloadScheduleData();
+    }
+
+    // 导出排班表
+    function exportSchedule(exportType) {
+        // 获取当前选中的周
+        const selectedWeek = getSelectedWeek(); // 需要根据实际选择的周来确定日期范围
+
+        // 准备导出数据
+        const exportData = {
+            exportType: exportType,
+            startDate: selectedWeek.startDate,
+            endDate: selectedWeek.endDate,
+            departmentId: null // 医生端导出时不需要指定科室ID，后端会根据当前用户自动获取
+        };
+
+        // 发送导出请求
+        fetch('/schedule/export-schedule', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(exportData)
+        })
+            .then(response => {
+                if (response.ok) {
+                    return response.blob();
+                }
+                throw new Error('导出失败');
+            })
+            .then(blob => {
+                // 创建下载链接
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = exportType === 'week' ? `周排班表_${new Date().toISOString().slice(0, 10)}.xlsx` : `月排班表_${new Date().toISOString().slice(0, 10)}.xlsx`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+            })
+            .catch(error => {
+                console.error('导出排班表时出错:', error);
+                alert('导出排班表失败');
+            });
+    }
+
+    // 更新周视图的日期显示
+    function updateWeekViewDates() {
+        // 获取当前显示周的周一
+        const weekStart = window.currentWeekStart || getMonday(new Date());
+
+        // 计算一周中每天的日期
+        const dates = [];
+        for (let i = 0; i < 7; i++) {
+            const date = new Date(weekStart);
+            date.setDate(weekStart.getDate() + i);
+            dates.push(date);
+        }
+
+        // 更新表格中的日期显示
+        const dayNames = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+        const dayLabels = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+
+        // 更新月份显示
+        const monthElement = document.getElementById('current-month');
+        if (monthElement) {
+            monthElement.textContent = (dates[0].getMonth() + 1) + '月';
+        }
+
+        // 更新每天的日期显示
+        for (let i = 0; i < 7; i++) {
+            const dateElement = document.getElementById('date-' + dayNames[i]);
+            if (dateElement) {
+                dateElement.textContent = dates[i].getDate() + '日';
+            }
+
+            // 更新每个单元格的data-date属性
+            const morningCell = document.getElementById(dayNames[i] + '-morning');
+            const afternoonCell = document.getElementById(dayNames[i] + '-afternoon');
+
+            if (morningCell) {
+                morningCell.setAttribute('data-date', dates[i].toISOString().split('T')[0]);
+            }
+            if (afternoonCell) {
+                afternoonCell.setAttribute('data-date', dates[i].toISOString().split('T')[0]);
+            }
+        }
+    }
+
+    // 获取当前选择的周的日期范围
+    function getSelectedWeek() {
+        // 获取当前显示的周的周一和周日
+        if (window.currentWeekStart && window.currentWeekEnd) {
+            // 使用当前显示的周
+            return {
+                startDate: window.currentWeekStart.toISOString().split('T')[0],
+                endDate: window.currentWeekEnd.toISOString().split('T')[0]
+            };
+        } else {
+            // 如果没有当前周信息，则使用当前周
+            const today = new Date();
+            const currentMonday = getMonday(today);
+
+            const monday = new Date(currentMonday);
+            const sunday = new Date(currentMonday);
+            sunday.setDate(sunday.getDate() + 6);
+
+            return {
+                startDate: monday.toISOString().split('T')[0],
+                endDate: sunday.toISOString().split('T')[0]
+            };
+        }
+    }
+
+    // 选择周次
+    function selectWeek(weekType) {
+        // 根据选择的周类型计算目标周的周一
+        const today = new Date();
+        const currentMonday = getMonday(today);
+        let targetMonday;
+
+        switch(weekType) {
+            case 'last':
+                targetMonday = new Date(currentMonday);
+                targetMonday.setDate(targetMonday.getDate() - 7);
+                break;
+            case 'current':
+                targetMonday = currentMonday;
+                break;
+            case 'next':
+                targetMonday = new Date(currentMonday);
+                targetMonday.setDate(targetMonday.getDate() + 7);
+                break;
+            default:
+                targetMonday = currentMonday;
+        }
+
+        // 更新周次选择按钮文本
+        document.getElementById('weekSelectorBtn').textContent =
+            `${targetMonday.getFullYear()}年${targetMonday.getMonth() + 1}月${targetMonday.getDate()}日-${targetMonday.getDate() + 6}日`;
+
+        // 关闭下拉菜单
+        const dropdownElement = document.querySelector('#weekSelectorBtn');
+        const dropdown = bootstrap.Dropdown.getInstance(dropdownElement) || new bootstrap.Dropdown(dropdownElement);
+        // 手动关闭下拉菜单
+        const dropdownMenu = document.querySelector('#weekSelectorBtn + .dropdown-menu');
+        if (dropdownMenu) {
+            dropdownMenu.style.display = 'none';
+        }
+
+        // 更新周视图矩阵的日期
+        updateWeekView(weekType);
+    }
+
+    // 更新周视图
+    function updateWeekView(weekType) {
+        // 根据选择的周类型计算目标周的周一
+        const today = new Date();
+        const currentMonday = getMonday(today);
+        let targetMonday;
+
+        switch(weekType) {
+            case 'last':
+                targetMonday = new Date(currentMonday);
+                targetMonday.setDate(targetMonday.getDate() - 7);
+                break;
+            case 'current':
+                targetMonday = currentMonday;
+                break;
+            case 'next':
+                targetMonday = new Date(currentMonday);
+                targetMonday.setDate(targetMonday.getDate() + 7);
+                break;
+            default:
+                targetMonday = currentMonday;
+        }
+
+        // 更新周视图矩阵以显示目标周
+        updateWeekMatrix(targetMonday);
+
+        // 更新月历视图以匹配当前周
+        updateMonthView();
+    }
+
+    // 更新周矩阵视图
+    function updateWeekMatrix(mondayDate) {
+        // 这里可以添加更新周矩阵的逻辑
+        // 目前重新加载整个排班视图
+        loadDoctorScheduleView();
+    }
+
+    // 初始化年月选择器
+    document.addEventListener('DOMContentLoaded', function() {
+        // 初始化年份选择器 (当前年份前后10年)
+        const yearSelector = document.getElementById('yearSelector');
+        if (yearSelector) {
+            const currentYear = new Date().getFullYear();
+            for (let year = currentYear - 10; year <= currentYear + 10; year++) {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year;
+                if (year === currentYear) {
+                    option.selected = true;
+                }
+                yearSelector.appendChild(option);
+            }
+        }
+
+        // 初始化月份选择器
+        const monthSelector = document.getElementById('monthSelector');
+        if (monthSelector) {
+            const monthNames = ['1月', '2月', '3月', '4月', '5月', '6月',
+                '7月', '8月', '9月', '10月', '11月', '12月'];
+            for (let month = 0; month < 12; month++) {
+                const option = document.createElement('option');
+                option.value = month + 1;
+                option.textContent = monthNames[month];
+                if (month + 1 === new Date().getMonth() + 1) {
+                    option.selected = true;
+                }
+                monthSelector.appendChild(option);
+            }
+        }
+
+        // 初始化月历
+        if (document.getElementById('calendarGrid')) {
+            generateCalendar();
+        }
+    });
+
+    // 选择特定日期
+    function selectDate(year, month, day) {
+        // 关闭下拉菜单
+        const dropdownMenu = document.querySelector('#weekSelectorBtn + .dropdown-menu');
+        if (dropdownMenu) {
+            dropdownMenu.style.display = 'none';
+        }
+
+        // 创建日期对象
+        const selectedDate = new Date(year, month - 1, day);
+
+        // 计算该日期所在的周
+        const weekStart = getMonday(selectedDate);
+
+        // 更新周视图到选定日期的周
+        updateWeekViewByDate(weekStart);
+    }
+
+    // 根据日期更新周视图
+    function updateWeekViewByDate(mondayDate) {
+        // 这里可以添加具体的更新逻辑
+        console.log('更新到周：', mondayDate);
+
+        // 重新加载排班数据
+        loadDoctorScheduleView();
+    }
+
+    // 获取给定日期所在周的周一
+    function getMonday(date) {
+        const day = date.getDay();
+        const diff = date.getDate() - day + (day === 0 ? -6 : 1); // 调整为周一
+        return new Date(date.setDate(diff));
+    }
+
+    // 获取当前周的开始日期（周一）
+    function getCurrentWeekStart() {
+        return getMonday(new Date());
+    }
+
+    // 检查两个日期是否在同一周
+    function isSameWeek(date1, date2) {
+        if (!date1 || !date2) return false;
+
+        const week1Start = getMonday(new Date(date1));
+        const week2Start = getMonday(new Date(date2));
+
+        return week1Start.getFullYear() === week2Start.getFullYear() &&
+            week1Start.getMonth() === week2Start.getMonth() &&
+            week1Start.getDate() === week2Start.getDate();
+    }
+
+    // 打开请假模态框
+    function openLeaveModal(cellElement) {
+        // 获取单元格的日期和时间信息
+        const date = cellElement.getAttribute('data-date');
+        const time = cellElement.getAttribute('data-time');
+
+        // 获取诊室号
+        const roomNumber = cellElement.querySelector('.room-number') ? cellElement.querySelector('.room-number').textContent : '';
+
+        // 将日期字符串转换为Date对象以获取星期
+        const dateObj = new Date(date);
+        const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+        const weekday = weekdays[dateObj.getDay()];
+
+        // 获取月份和日期
+        const month = dateObj.getMonth() + 1;
+        const day = dateObj.getDate();
+
+        // 确定工作时间
+        const workTime = time === '上午' ? '8:00-12:00' : time === '下午' ? '14:00-18:00' : '其他时间';
+
+        // 创建模态框HTML
+        let modalHtml = '';
+        modalHtml += '<div class="modal fade show" id="leaveModal" tabindex="-1" style="display: block; padding-right: 17px;">';
+        modalHtml += '    <div class="modal-dialog modal-dialog-centered">';
+        modalHtml += '        <div class="modal-content">';
+        modalHtml += '            <div class="modal-header">';
+        modalHtml += '                <h5 class="modal-title">申请请假</h5>';
+        modalHtml += '                <button type="button" class="btn-close" onclick="closeLeaveModal()"></button>';
+        modalHtml += '            </div>';
+        modalHtml += '            <div class="modal-body text-center">';
+        modalHtml += '                <div class="mb-3">';
+        modalHtml += '                    <h6>' + month + '月' + day + '日  ' + weekday + ' ' + time + '</h6>';
+        modalHtml += '                </div>';
+        modalHtml += '                <div class="mb-3">';
+        modalHtml += '                    <p>' + workTime + '</p>';
+        modalHtml += '                </div>';
+        modalHtml += '                <div class="mb-3">';
+        modalHtml += '                    <p>诊室号: ' + roomNumber + '</p>';
+        modalHtml += '                </div>';
+        modalHtml += '                <div class="d-grid gap-2 d-md-flex justify-content-md-center">';
+        modalHtml += '                    <button class="btn btn-primary me-md-2" onclick="openLeaveReasonModal(\'' + date + '\', \'' + time + '\')">请假</button>';
+        modalHtml += '                    <button class="btn btn-secondary" onclick="closeLeaveModal()">返回</button>';
+        modalHtml += '                </div>';
+        modalHtml += '            </div>';
+        modalHtml += '        </div>';
+        modalHtml += '    </div>';
+        modalHtml += '    <div class="modal-backdrop fade show" style="display: block;"></div>';
+        modalHtml += '</div>';
+
+        // 添加模态框到页面
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+    }
+
+    // 关闭请假模态框
+    function closeLeaveModal() {
+        const modal = document.getElementById('leaveModal');
+        const backdrop = document.querySelector('.modal-backdrop');
+
+        if (modal) {
+            modal.remove();
+        }
+        if (backdrop) {
+            backdrop.remove();
+        }
+    }
+
+    // 打开请假原因模态框
+    function openLeaveReasonModal(date, time) {
+        // 关闭当前的请假申请模态框
+        closeLeaveModal();
+
+        // 创建请假原因模态框HTML
+        let reasonModalHtml = '';
+        reasonModalHtml += '<div class="modal fade show" id="leaveReasonModal" tabindex="-1" style="display: block; padding-right: 17px;">';
+        reasonModalHtml += '    <div class="modal-dialog modal-dialog-centered">';
+        reasonModalHtml += '        <div class="modal-content">';
+        reasonModalHtml += '            <div class="modal-header">';
+        reasonModalHtml += '                <h5 class="modal-title">请假申请</h5>';
+        reasonModalHtml += '                <button type="button" class="btn-close" onclick="closeLeaveReasonModal()"></button>';
+        reasonModalHtml += '            </div>';
+        reasonModalHtml += '            <div class="modal-body">';
+        reasonModalHtml += '                <div class="mb-3">';
+        reasonModalHtml += '                    <textarea class="form-control" id="leaveReason" rows="4" placeholder="请输入请假原因" style="font-size: 14px;"></textarea>';
+        reasonModalHtml += '                </div>';
+        reasonModalHtml += '                <div class="d-grid gap-2 d-md-flex justify-content-md-center">';
+        reasonModalHtml += '                    <button class="btn btn-primary me-md-2" onclick="submitLeaveRequest(\'' + date + '\', \'' + time + '\')">提交申请</button>';
+        reasonModalHtml += '                    <button class="btn btn-secondary" onclick="closeLeaveReasonModal()">返回</button>';
+        reasonModalHtml += '                </div>';
+        reasonModalHtml += '            </div>';
+        reasonModalHtml += '        </div>';
+        reasonModalHtml += '    </div>';
+        reasonModalHtml += '    <div class="modal-backdrop fade show" style="display: block;"></div>';
+        reasonModalHtml += '</div>';
+
+        // 添加请假原因模态框到页面
+        document.body.insertAdjacentHTML('beforeend', reasonModalHtml);
+    }
+
+    // 关闭请假原因模态框
+    function closeLeaveReasonModal() {
+        const reasonModal = document.getElementById('leaveReasonModal');
+        const backdrop = document.querySelector('.modal-backdrop');
+
+        if (reasonModal) {
+            reasonModal.remove();
+        }
+        if (backdrop) {
+            backdrop.remove();
+        }
+    }
+
+    // 提交请假请求
+    function submitLeaveRequest(date, time) {
+        const reason = document.getElementById('leaveReason').value;
+
+        if (!reason.trim()) {
+            alert('请输入请假原因');
+            return;
+        }
+
+        // 准备提交数据
+        const leaveData = {
+            date: date,
+            timeSlot: time,
+            reason: reason
+        };
+
+        // 发送请求到后端
+        fetch('/schedule/apply-leave', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(leaveData)
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('请假申请已提交');
+                    closeLeaveReasonModal();
+                    // 重新加载排班视图以更新显示
+                    loadDoctorScheduleView();
+                } else {
+                    alert('提交失败: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('提交请假申请时出错:', error);
+                alert('提交失败，请重试');
+            });
+    }
+
+    // 申请请假功能
+    function applyLeave() {
+        // 创建一个模态框让用户输入请假信息
+        const modalHtml = `
+            <div class="modal fade" id="leaveModal" tabindex="-1" aria-labelledby="leaveModalLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="leaveModalLabel">申请请假</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label for="leaveDate" class="form-label">请假日期</label>
+                                <input type="date" class="form-control" id="leaveDate">
+                            </div>
+                            <div class="mb-3">
+                                <label for="leaveTimeSlot" class="form-label">请假时段</label>
+                                <select class="form-select" id="leaveTimeSlot">
+                                    <option value="上午">上午</option>
+                                    <option value="下午">下午</option>
+                                    <option value="晚上">晚上</option>
+                                    <option value="全天">全天</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="leaveReason" class="form-label">请假原因</label>
+                                <textarea class="form-control" id="leaveReason" rows="3" placeholder="请输入请假原因"></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                            <button type="button" class="btn btn-primary" onclick="submitLeaveRequest()">提交申请</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // 添加模态框到页面
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        // 显示模态框
+        const leaveModal = new bootstrap.Modal(document.getElementById('leaveModal'));
+        leaveModal.show();
+
+        // 监听模态框关闭事件，移除DOM元素
+        document.getElementById('leaveModal').addEventListener('hidden.bs.modal', function () {
+            this.remove();
+        });
+    }
+
+    // 初始化周次选择功能
+    function initializeWeekSelection() {
+        // 初始化年份选择器
+        loadYears();
+
+        // 初始化当前周
+        initializeCurrentWeek();
+
+        // 更新表格日期
+        updateWeekViewDates();
+
+        // 生成月历
+        generateCalendar();
+
+        // 绑定按钮事件
+        document.getElementById('prevWeekBtn') && document.getElementById('prevWeekBtn').addEventListener('click', function(e) {
+            e.stopPropagation();
+            const prevMonday = new Date(window.currentWeekStart);
+            prevMonday.setDate(prevMonday.getDate() - 7);
+            selectWeekForDate(prevMonday);
+        });
+
+        document.getElementById('currentWeekBtn') && document.getElementById('currentWeekBtn').addEventListener('click', function(e) {
+            e.stopPropagation();
+            selectWeekForDate(new Date());
+        });
+
+        document.getElementById('nextWeekBtn') && document.getElementById('nextWeekBtn').addEventListener('click', function(e) {
+            e.stopPropagation();
+            const nextMonday = new Date(window.currentWeekStart);
+            nextMonday.setDate(nextMonday.getDate() + 7);
+            selectWeekForDate(nextMonday);
+        });
+
+        document.getElementById('jumpMonthBtn') && document.getElementById('jumpMonthBtn').addEventListener('click', function(e) {
+            e.stopPropagation();
+            generateCalendar();
+        });
+
+        // 年月选择器变化事件
+        document.getElementById('yearSelector') && document.getElementById('yearSelector').addEventListener('change', function(e) {
+            e.stopPropagation();
+            generateCalendar();
+        });
+
+        document.getElementById('monthSelector') && document.getElementById('monthSelector').addEventListener('change', function(e) {
+            e.stopPropagation();
+            generateCalendar();
+        });
+    }
+
+    // 加载年份选项
+    function loadYears() {
+        const yearSelect = document.getElementById('yearSelector');
+        if (!yearSelect) return;
+
+        const currentYear = new Date().getFullYear();
+
+        // 清空现有选项
+        yearSelect.innerHTML = '';
+
+        for (let i = currentYear - 10; i <= currentYear + 10; i++) {
+            const option = document.createElement('option');
+            option.value = i;
+            option.textContent = i;
+            if (i === currentYear) {
+                option.selected = true;
+            }
+            yearSelect.appendChild(option);
+        }
+    }
+
+    // 生成月历
+    function generateCalendar() {
+        const calendarGrid = document.getElementById('calendarGrid');
+        if (!calendarGrid) return;
+
+        const year = parseInt(document.getElementById('yearSelector').value);
+        const month = parseInt(document.getElementById('monthSelector').value);
+
+        // 清空现有内容
+        calendarGrid.innerHTML = '';
+
+        // 添加星期标题
+        const weekdays = ['一', '二', '三', '四', '五', '六', '日'];
+        weekdays.forEach(day => {
+            const dayElement = document.createElement('div');
+            dayElement.className = 'calendar-day fw-bold';
+            dayElement.textContent = day;
+            calendarGrid.appendChild(dayElement);
+        });
+
+        // 获取当月第一天
+        const firstDay = new Date(year, month - 1, 1);
+        // 获取当月最后一天
+        const lastDay = new Date(year, month, 0);
+
+        // 获取当月第一天是星期几 (0是周日，1是周一...6是周六)
+        const firstDayOfWeek = firstDay.getDay();
+
+        // 计算日历开始日期（当月第一周的周一）
+        // 如果第一天是周日(0)，则需要回退6天到周一
+        // 如果第一天是周X(1-6)，则需要回退(X-1)天到周一
+        const startDayOffset = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1;
+        const startDate = new Date(year, month - 1, 1 - startDayOffset);
+
+        // 生成日历天数
+        const today = new Date();
+
+        for (let i = 0; i < 42; i++) { // 最多6行7列
+            const currentDate = new Date(year, month - 1, 1 - startDayOffset + i); // 使用构造函数直接创建正确日期
+
+            const dayElement = document.createElement('div');
+            dayElement.className = 'calendar-day';
+            dayElement.textContent = currentDate.getDate();
+
+            // 检查是否是今天
+            if (currentDate.toDateString() === today.toDateString()) {
+                dayElement.classList.add('today');
+            }
+
+            // 检查是否是当前月份
+            if (currentDate.getMonth() + 1 === month) {
+                dayElement.classList.add('current-month');
+            } else {
+                dayElement.classList.add('other-month');
+                dayElement.style.color = '#ccc';
+            }
+
+            // 保存当前日期的副本，避免闭包问题
+            const dateCopy = new Date(currentDate);
+
+            dayElement.addEventListener('click', function (e) {
+                // 阻止事件冒泡，防止下拉菜单关闭
+                e.stopPropagation();
+
+                // 检查是否是当前月份的日期
+                if (dateCopy.getMonth() + 1 !== month) {
+                    // 如果不是当前月份的日期，不执行选择操作
+                    return;
+                }
+
+                // 移除之前选中的日期样式
+                document.querySelectorAll('.calendar-day.selected').forEach(day => {
+                    day.classList.remove('selected');
+                });
+
+                // 添加选中样式到当前日期
+                this.classList.add('selected');
+
+                // 保存选中的日期到全局变量
+                window.selectedDate = dateCopy;
+            });
+
+            calendarGrid.appendChild(dayElement);
+        }
+    }
+
+    // 选择指定日期所在的周
+    function selectWeekForDate(date) {
+        // 计算该日期所在周的周一
+        const weekStart = new Date(date);
+        const dayOfWeek = weekStart.getDay();
+        const diffToMonday = weekStart.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+        weekStart.setDate(diffToMonday);
+
+        window.currentWeekStart = new Date(weekStart);
+        window.currentWeekEnd = new Date(weekStart);
+        window.currentWeekEnd.setDate(window.currentWeekEnd.getDate() + 6);
+
+        // 更新周次选择按钮文本
+        const weekBtn = document.getElementById('weekSelectorBtn');
+        if (weekBtn) {
+            weekBtn.textContent =
+                `${weekStart.getFullYear()}年${weekStart.getMonth() + 1}月${weekStart.getDate()}日-${window.currentWeekEnd.getDate()}日`;
+        }
+
+        // 关闭下拉菜单
+        const dropdownMenu = document.querySelector('#weekSelectorBtn + .dropdown-menu');
+        if (dropdownMenu) {
+            dropdownMenu.classList.remove('show');
+
+            // 同时确保按钮的aria-expanded属性正确设置
+            const weekSelectorBtn = document.getElementById('weekSelectorBtn');
+            if (weekSelectorBtn) {
+                weekSelectorBtn.setAttribute('aria-expanded', 'false');
+            }
+        }
+
+        // 更新月份标题，同时显示年份和月份
+        const monthElement = document.getElementById('current-month');
+        if (monthElement) {
+            monthElement.textContent = `${weekStart.getMonth() + 1}月`;
+        }
+
+        // 更新表头日期
+        updateWeekDates(window.currentWeekStart);
+
+        // 更新单元格样式
+        updateScheduleCells(window.currentWeekStart);
+
+        // 重新加载排班数据而不重新加载整个页面
+        reloadScheduleData();
+    }
+
+    // 重新加载排班数据
+    function reloadScheduleData() {
+        console.log('开始加载排班数据...');
+        console.log('当前周范围:', window.currentWeekStart, ' 到 ', window.currentWeekEnd);
+
+        // 从后端获取医生的排班信息
+        fetch('/schedule/doctor-schedule')
+            .then(response => response.json())
+            .then(data => {
+                console.log('从后端获取的数据:', data);
+                if (data.success) {
+                    if (data.schedules && data.schedules.length > 0) {
+                        console.log('找到', data.schedules.length, '条排班记录');
+
+                        // 清空现有的排班数据
+                        const morningCells = document.querySelectorAll('[id$="-morning"]');
+                        const afternoonCells = document.querySelectorAll('[id$="-afternoon"]');
+
+                        // 重置所有单元格
+                        morningCells.forEach(cell => {
+                            cell.innerHTML = '';
+                            cell.style.backgroundColor = '#ffffff';
+                            cell.onclick = null;
+                            cell.removeAttribute('data-date');
+                            cell.removeAttribute('data-time');
+                        });
+
+                        afternoonCells.forEach(cell => {
+                            cell.innerHTML = '';
+                            cell.style.backgroundColor = '#ffffff';
+                            cell.onclick = null;
+                            cell.removeAttribute('data-date');
+                            cell.removeAttribute('data-time');
+                        });
+
+                        // 将排班数据填充到表格中
+                        data.schedules.forEach(schedule => {
+                            console.log('处理排班记录:', schedule);
+
+                            // 解析日期获取星期几
+                            // 处理可能的日期格式问题，scheduleDate可能是字符串或Date对象
+                            let date;
+                            if (typeof schedule.scheduleDate === 'string') {
+                                // 如果是字符串格式，转换为Date对象，避免时区问题
+                                date = new Date(schedule.scheduleDate + 'T00:00:00');
+                            } else {
+                                date = new Date(schedule.scheduleDate);
+                            }
+
+                            // 确保日期是纯日期格式，不包含时间部分
+                            const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+                            const dayOfWeek = dateOnly.getDay(); // 0是周日，1是周一，依此类推
+
+                            // 只处理当前周范围内的数据
+                            const weekStart = new Date(window.currentWeekStart.getFullYear(), window.currentWeekStart.getMonth(), window.currentWeekStart.getDate());
+                            const weekEnd = new Date(window.currentWeekEnd.getFullYear(), window.currentWeekEnd.getMonth(), window.currentWeekEnd.getDate());
+
+                            console.log('比较日期:', dateOnly, ' 是否在 ', weekStart, ' 和 ', weekEnd, ' 之间');
+
+                            // 检查排班日期是否在当前周范围内
+                            if (dateOnly >= weekStart && dateOnly <= weekEnd) {
+                                console.log('日期匹配，处理单元格');
+
+                                // 确定列索引（将周日放在最后）
+                                let colIndex;
+                                if (dayOfWeek === 0) {
+                                    colIndex = 7; // 周日放在最后
+                                } else {
+                                    colIndex = dayOfWeek; // 周一为1，依此类推
+                                }
+
+                                // 确定行索引（根据时段）
+                                let rowIndex;
+                                if (schedule.timeSlot === '上午') {
+                                    rowIndex = 0;
+                                } else if (schedule.timeSlot === '下午') {
+                                    rowIndex = 1;
+                                } else {
+                                    rowIndex = 0; // 默认上午
+                                }
+
+                                // 计算表格单元格的ID
+                                const dayNames = ['', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']; // 索引0不使用
+                                const dayName = dayNames[colIndex];
+
+                                let cellId;
+                                if (rowIndex === 0) {
+                                    cellId = dayName + '-morning';
+                                } else {
+                                    cellId = dayName + '-afternoon';
+                                }
+
+                                console.log('目标单元格ID:', cellId);
+
+                                // 获取对应的单元格
+                                const cell = document.getElementById(cellId);
+
+                                if (cell) {
+                                    console.log('找到单元格，设置内容:', schedule.roomNumber);
+                                    // 设置单元格内容
+                                    if (schedule.scheduleStatus === 'LEAVE') {
+                                        cell.innerHTML = '<span class="badge bg-warning">请假</span>';
+                                        cell.style.backgroundColor = '#fff3cd';
+                                    } else {
+                                        // 显示诊室号
+                                        if (schedule.roomNumber) {
+                                            cell.innerHTML = '<span class="room-number">' + schedule.roomNumber + '</span>';
+                                            cell.style.backgroundColor = '#d4edda'; // 绿色背景
+
+                                            // 添加点击事件，仅对有记录的单元格
+                                            cell.onclick = function() {
+                                                openLeaveModal(this);
+                                            };
+
+                                            // 检查日期是否为今天之前或今天下午已过12点
+                                            const today = new Date();
+                                            const scheduleDate = new Date(schedule.scheduleDate + 'T00:00:00'); // 避免时区问题
+
+                                            // 如果是今天之前的日期，设置为浅灰色且不可点击
+                                            if (scheduleDate < new Date(today.getFullYear(), today.getMonth(), today.getDate())) {
+                                                cell.style.backgroundColor = '#e9ecef'; // 浅灰色
+                                                cell.onclick = null; // 移除点击事件
+                                            } else if (scheduleDate.toDateString() === today.toDateString()) {
+                                                // 如果是今天，检查时间段
+                                                if (schedule.timeSlot === '上午' && today.getHours() >= 12) {
+                                                    // 如果现在时间已超过上午工作时间，设置为浅灰色且不可点击
+                                                    cell.style.backgroundColor = '#e9ecef'; // 浅灰色
+                                                    cell.onclick = null; // 移除点击事件
+                                                }
+                                            }
+                                        } else {
+                                            // 如果没有诊室号，保持白色背景，不添加点击事件
+                                            cell.style.backgroundColor = '#ffffff';
+                                        }
+                                    }
+
+                                    // 添加数据属性
+                                    cell.setAttribute('data-date', schedule.scheduleDate);
+                                    cell.setAttribute('data-time', schedule.timeSlot);
+                                } else {
+                                    console.log('未找到单元格:', cellId);
+                                }
+                            } else {
+                                console.log('日期不匹配，跳过记录');
+                            }
+                        });
+                    }
+                } else {
+                    console.error('获取排班信息失败:', data.message);
+                }
+            })
+            .catch(error => {
+                console.error('加载排班信息时出错:', error);
+            });
+    }
+
+    // 初始化当前周
+    function initializeCurrentWeek() {
+        const today = new Date();
+        const dayOfWeek = today.getDay();
+        const diffToMonday = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+        const monday = new Date(today);
+        monday.setDate(diffToMonday);
+
+        window.currentWeekStart = new Date(monday);
+        window.currentWeekEnd = new Date(monday);
+        window.currentWeekEnd.setDate(window.currentWeekEnd.getDate() + 6);
+
+        // 更新周次选择按钮文本
+        const weekBtn = document.getElementById('weekSelectorBtn');
+        if (weekBtn) {
+            weekBtn.textContent =
+                `${window.currentWeekStart.getFullYear()}年${window.currentWeekStart.getMonth() + 1}月${window.currentWeekStart.getDate()}日-${window.currentWeekEnd.getDate()}日`;
+        }
+    }
+
+    // 更新周表头日期
+    function updateWeekDates(startDate) {
+        const days = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+
+        for (let i = 0; i < 7; i++) {
+            const date = new Date(startDate);
+            date.setDate(startDate.getDate() + i);
+
+            const dayElement = document.getElementById(`date-${days[i]}`);
+            if (dayElement) {
+                dayElement.textContent = `${date.getDate()}日`;
+            }
+
+            // 更新每个单元格的data-date属性
+            const morningCell = document.getElementById(days[i] + '-morning');
+            const afternoonCell = document.getElementById(days[i] + '-afternoon');
+
+            if (morningCell) {
+                morningCell.setAttribute('data-date', date.toISOString().split('T')[0]);
+            }
+            if (afternoonCell) {
+                afternoonCell.setAttribute('data-date', date.toISOString().split('T')[0]);
+            }
+        }
+    }
+
+    // 更新周矩阵单元格的日期和样式
+    function updateScheduleCells(startDate) {
+        const currentTime = new Date();
+
+        // 获取所有上午和下午的单元格
+        const morningCells = document.querySelectorAll('[id$="-morning"]');
+        const afternoonCells = document.querySelectorAll('[id$="-afternoon"]');
+
+        for (let i = 0; i < 7; i++) {
+            const date = new Date(startDate);
+            date.setDate(startDate.getDate() + i);
+
+            // 格式化日期为字符串
+            const dateStr = date.toISOString().split('T')[0];
+
+            // 更新上午单元格
+            if (morningCells[i]) {
+                morningCells[i].dataset.date = dateStr;
+                // 检查是否是过去日期或今天上午超过12点
+                if (isPastDate(date, '上午', currentTime)) {
+                    morningCells[i].classList.add('past');
+                    morningCells[i].style.backgroundColor = '#e9ecef';
+                    morningCells[i].style.color = '#6c757d';
+                } else {
+                    morningCells[i].classList.remove('past');
+                    morningCells[i].style.backgroundColor = '';
+                    morningCells[i].style.color = '';
+                }
+            }
+
+            // 更新下午单元格
+            if (afternoonCells[i]) {
+                afternoonCells[i].dataset.date = dateStr;
+                // 检查是否是过去日期
+                if (isPastDate(date, '下午', currentTime)) {
+                    afternoonCells[i].classList.add('past');
+                    afternoonCells[i].style.backgroundColor = '#e9ecef';
+                    afternoonCells[i].style.color = '#6c757d';
+                } else {
+                    afternoonCells[i].classList.remove('past');
+                    afternoonCells[i].style.backgroundColor = '';
+                    afternoonCells[i].style.color = '';
+                }
+            }
+        }
+    }
+
+    // 检查日期是否为过去日期
+    function isPastDate(date, timeSlot, currentTime) {
+        // 比较日期部分
+        const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+        const currentOnly = new Date(currentTime.getFullYear(), currentTime.getMonth(), currentTime.getDate());
+
+        // 如果是过去的日期，则为过去时间
+        if (dateOnly < currentOnly) {
+            return true;
+        }
+
+        // 如果是今天，检查时间段
+        if (dateOnly.getTime() === currentOnly.getTime()) {
+            if (timeSlot === '上午' && currentTime.getHours() >= 12) {
+                return true; // 上午时段已过
+            }
+        }
+
+        return false;
+    }
+
+    // 提交请假申请
+    function submitLeaveRequest() {
+        const leaveDate = document.getElementById('leaveDate').value;
+        const leaveTimeSlot = document.getElementById('leaveTimeSlot').value;
+        const leaveReason = document.getElementById('leaveReason').value;
+
+        if (!leaveDate || !leaveReason) {
+            alert('请填写完整的请假信息');
+            return;
+        }
+
+        const leaveData = {
+            date: leaveDate,
+            timeSlot: leaveTimeSlot,
+            reason: leaveReason
+        };
+
+        fetch('/schedule/apply-leave', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(leaveData)
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('请假申请已提交');
+
+                    // 关闭模态框
+                    const modalEl = document.getElementById('leaveModal');
+                    if (modalEl) {
+                        const modal = bootstrap.Modal.getInstance(modalEl);
+                        if (modal) {
+                            modal.hide();
+                        } else {
+                            // 如果无法获取实例，直接使用jQuery方式隐藏（如果有的话）或者移除元素
+                            modalEl.remove();
+                        }
+                    }
+
+                    // 重新加载排班数据
+                    loadDoctorScheduleView();
+                } else {
+                    alert('请假申请提交失败: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('提交请假申请时出错:', error);
+                alert('提交请假申请时出现错误');
+            });
+    }
+
+    /**
+     * 手动执行容器中的 script 标签
+     * @param {HTMLElement} container - 包含脚本的容器元素
+     */
+    function executeScripts(container) {
+        // 查找容器内所有的 script 标签
+        const scripts = container.querySelectorAll('script');
+
+        scripts.forEach(oldScript => {
+            // 创建一个新的 script 元素
+            const newScript = document.createElement('script');
+
+            // 1. 复制所有属性
+            Array.from(oldScript.attributes).forEach(attr => {
+                newScript.setAttribute(attr.name, attr.value);
+            });
+
+            // 2. 复制脚本内容
+            newScript.textContent = oldScript.textContent;
+
+            // 3. 用新脚本替换旧脚本
+            oldScript.parentNode.replaceChild(newScript, oldScript);
+        });
+    }
+
+    // AJAX加载内容 - 最终修复版
+    function loadContent(url, title) {
+        const mainContent = document.getElementById('mainContent');
+
+        // 显示加载中提示
+        mainContent.innerHTML = '<div class="text-center p-5"><div class="spinner-border text-primary" role="status"></div><p class="mt-2 text-muted">加载中...</p></div>';
+
+        // 1. 添加时间戳防止缓存 (?t=...)
+        const fetchUrl = url + (url.includes('?') ? '&' : '?') + 't=' + new Date().getTime();
+
+        fetch(fetchUrl)
+            .then(response => {
+                if (!response.ok) throw new Error('网络响应异常');
+                return response.text();
+            })
+            .then(html => {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+
+                let finalHtml = '';
+
+                // 2. 【关键修改】减少匹配规则，防止遗漏兄弟元素
+                // 只有当页面明确指定了 #main-content 或 .main-content 时才精确提取
+                // 否则直接提取整个 body，确保 modal 和 script 不丢失
+                const contentSelector = doc.querySelector('#main-content') || doc.querySelector('.main-content');
+
+                if (contentSelector) {
+                    // 清理可能残留的导航栏
+                    const sidebar = contentSelector.querySelector('.sidebar');
+                    if (sidebar) sidebar.remove();
+                    finalHtml = contentSelector.innerHTML;
+                } else {
+                    // 兜底方案：提取 body 中的所有内容
+                    // 先移除 sidebar 防止重复
+                    const sidebar = doc.querySelector('.sidebar');
+                    if (sidebar) sidebar.remove();
+                    finalHtml = doc.body.innerHTML;
+                }
+
+                // 3. 渲染 HTML
+                mainContent.innerHTML = finalHtml;
+
+                // 4. 强制执行新页面中的脚本
+                const scripts = mainContent.querySelectorAll('script');
+                scripts.forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => {
+                        newScript.setAttribute(attr.name, attr.value);
+                    });
+                    newScript.textContent = oldScript.textContent;
+                    document.body.appendChild(newScript);
+                });
+
+                // 5. 页面特定初始化逻辑
+                // 检查报告页面
+                if (url.includes('examinations')) {
+                    console.log('检测到检查报告页面，正在等待脚本初始化...');
+                    let checkCount = 0;
+                    const checkInterval = setInterval(() => {
+                        // 检查 window 对象上是否挂载了函数
+                        if (typeof window.initExaminations === 'function') {
+                            clearInterval(checkInterval);
+                            console.log('initExaminations 函数已就绪，开始执行');
+                            window.initExaminations();
+                        } else {
+                            checkCount++;
+                            if (checkCount > 20) { // 1秒超时
+                                clearInterval(checkInterval);
+                                console.error('超时：未找到 initExaminations。请检查 HTML 结构是否完整（script标签是否被正确加载）。');
+                            }
+                        }
+                    }, 50);
+                }
+
+                // 病历页面
+                if (url.includes('medical-records') || url.includes('medical-records-view')) {
+                    setTimeout(() => {
+                        if (typeof loadMedicalRecords === 'function') {
+                            loadMedicalRecords();
+                        }
+                    }, 100);
+                }
+
+            })
+            .catch(error => {
+                console.error('加载失败:', error);
+                mainContent.innerHTML = `
+            <div class="error-alert" style="background: linear-gradient(135deg, #FFE6E6 0%, #FFF0F0 100%); border-left: 5px solid #DC3545; border-radius: 8px; padding: 30px; margin: 20px;">
+                <h3 style="color: #DC3545; font-size: 22px; font-weight: 600; margin-bottom: 15px;">加载失败</h3>
+                <p style="color: #6B7280; font-size: 14px; line-height: 1.6;">抱歉，载入内容时发生错误，请稍后再试。</p>
+            </div>
+        `;
+            });
+    }
+
+
+    /**
+     * 打开编辑模态框并回显数据
+     */
+    function openEditModal(id, patientName, visitDate) {
+        // 1. 设置基础只读信息
+        document.getElementById('editRecordId').value = id;
+        document.getElementById('editPatientName').value = patientName;
+        document.getElementById('editVisitDate').value = visitDate;
+
+        // 2. 先请求详情接口获取完整数据 (复用之前的详情接口)
+        fetch(`/doctor/api/medical-records/${id}`)
+            .then(res => res.json())
+            .then(data => {
+                // 3. 回显数据到输入框 (如果是 null 则显示空字符串)
+                document.getElementById('editDiagnosis').value = data.diagnosis || '';
+                document.getElementById('editChiefComplaint').value = data.chiefComplaint || '';
+                document.getElementById('editPresentIllness').value = data.presentIllness || '';
+                document.getElementById('editPastIllness').value = data.pastIllness || '';
+                document.getElementById('editPhysicalExam').value = data.physicalExamination || '';
+                document.getElementById('editAuxiliaryExam').value = data.auxiliaryExamination || '';
+                document.getElementById('editTreatmentPlan').value = data.treatmentPlan || '';
+
+                // 4. 显示模态框
+                const modal = new bootstrap.Modal(document.getElementById('recordEditModal'));
+                modal.show();
+            })
+            .catch(err => {
+                console.error(err);
+                alert('获取数据失败，无法进行编辑');
+            });
+    }
+
+    const statsData = /*[[${stats}]]*/ {};
+
+    // 2. 页面加载完成后的统一入口
+    document.addEventListener('DOMContentLoaded', function() {
+        // 初始化周次选择 (保留原有逻辑)
+        if (typeof initializeWeekSelection === 'function') {
+            initializeWeekSelection();
+        }
+
+        // 初始化年龄图表 (新增逻辑)
+        initAgeChart();
+    });
+
+    // 3. 图表初始化函数
+    function initAgeChart() {
+        const chartCanvas = document.getElementById('ageDistributionChart');
+
+        // 调试：打印 statsData
+        console.log('statsData:', statsData);
+        console.log('statsData.ageDistribution:', statsData ? statsData.ageDistribution : 'statsData is null');
+
+        // 如果调试信息元素存在，显示数据
+        const debugInfo = document.getElementById('debugInfo');
+        const statsDataElement = document.getElementById('statsData');
+        if (debugInfo && statsDataElement) {
+            debugInfo.style.display = 'block';
+            statsDataElement.textContent = JSON.stringify(statsData, null, 2);
+        }
+
+        // 防止页面上没有这个元素导致报错
+        if (!chartCanvas) {
+            console.warn('找不到 ageDistributionChart 画布元素，跳过图表初始化');
+            return;
+        }
+
+        const ctx = chartCanvas.getContext('2d');
+
+        // 确保 ageDistribution 存在且有数据
+        let ageMap = {};
+
+        // 尝试从多个可能的位置获取数据
+        if (statsData && statsData.ageDistribution && typeof statsData.ageDistribution === 'object') {
+            ageMap = statsData.ageDistribution;
+        } else if (window.stats && window.stats.ageDistribution) {
+            ageMap = window.stats.ageDistribution;
+        } else {
+            // 如果都失败，使用默认数据
+            console.warn('无法获取年龄分布数据，使用默认数据');
+            ageMap = {
+                "0-18岁": 0,
+                "19-35岁": 0,
+                "36-50岁": 0,
+                "51-65岁": 0,
+                "65岁以上": 0
+            };
+        }
+
+        // 确保所有年龄段都有值
+        const requiredGroups = ["0-18岁", "19-35岁", "36-50岁", "51-65岁", "65岁以上"];
+        requiredGroups.forEach(group => {
+            if (ageMap[group] === undefined) {
+                ageMap[group] = 0;
+            }
+        });
+
+        const labels = Object.keys(ageMap);
+        const dataValues = Object.values(ageMap);
+
+        console.log('图表数据 - 标签:', labels);
+        console.log('图表数据 - 值:', dataValues);
+
+        // 销毁已存在的图表实例
+        if (window.ageChart instanceof Chart) {
+            window.ageChart.destroy();
+        }
+
+        // 创建新图表
+        window.ageChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: '患者人数',
+                    data: dataValues,
+                    backgroundColor: [
+                        'rgba(54, 162, 235, 0.6)',
+                        'rgba(75, 192, 192, 0.6)',
+                        'rgba(255, 206, 86, 0.6)',
+                        'rgba(153, 102, 255, 0.6)',
+                        'rgba(255, 99, 132, 0.6)'
+                    ],
+                    borderColor: [
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(153, 102, 255, 1)',
+                        'rgba(255, 99, 132, 1)'
+                    ],
+                    borderWidth: 1,
+                    barPercentage: 0.6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: '人数'
+                        },
+                        ticks: {
+                            stepSize: 1
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            maxRotation: 0
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.raw + ' 人';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('DOM 加载完成，开始初始化图表...');
+
+        // 延迟一点时间确保所有数据加载完成
+        setTimeout(() => {
+            initAgeChart();
+        }, 500);
+    });
+</script>
+</body>
+</html>

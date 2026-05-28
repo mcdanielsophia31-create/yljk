@@ -1,0 +1,25 @@
+# 测试patient3登录功能
+# 您可以使用以下方式测试登录：
+
+# 1. 访问登录页面
+# http://localhost:8081/login
+
+# 2. 使用以下凭据登录:
+# 用户名/电话: patient3 或 13900139003
+# 密码: 123456
+
+# 3. 或者通过API测试:
+# POST请求到 http://localhost:8081/login
+# 表单数据:
+# - username: patient3 (或 13900139003)
+# - password: 123456
+
+# 4. 登录成功后将重定向到患者仪表盘页面
+# http://localhost:8081/patient/dashboard
+
+# 5. 患者信息:
+# - 用户名: patient3
+# - 电话: 139000139003
+# - 用户类型: PATIENT
+# - 状态: ACTIVE (激活状态，可以登录)
+# - 真实姓名: 患者3

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<th:block th:fragment="content">
+    <!-- 搜索框 -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="input-group">
+                <input type="text" id="doctor-search-input" class="form-control"
+                       placeholder="输入医生姓名搜索" th:value="${searchName}">
+                <button class="btn btn-primary" type="button" onclick="searchDoctors()">
+                    <i class="fas fa-search"></i> 搜索
+                </button>
+                <button class="btn btn-outline-secondary" type="button" onclick="clearDoctorSearch()">
+                    <i class="fas fa-redo"></i> 重置
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 医生表格 -->
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>姓名</th>
+                <th>工号</th>
+                <th>性别</th>
+                <th>电话</th>
+                <th>操作</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="doctor : ${doctors}" th:if="${doctors != null and !doctors.isEmpty()}">
+                <td th:text="${doctor.id}">1</td>
+                <td th:text="${doctor.name}">张医生</td>
+                <td th:text="${doctor.employeeId}">001</td>
+                <td th:text="${doctor.gender}">男</td>
+                <td th:text="${doctor.phone}">13800138000</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary doctor-detail-btn"
+                            th:data-name="${doctor.name}"
+                            th:data-phone-bound="${doctor.phoneBound ? '已绑定' : '未绑定'}"
+                            th:data-title="${doctor.title}">
+                        <i class="fas fa-eye"></i> 查看
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger"
+                            th:data-id="${doctor.id}"
+                            onclick="window.resetDoctorPassword(this.getAttribute('data-id'))">
+                        <i class="fas fa-key"></i> 重置密码
+                    </button>
+                </td>
+            </tr>
+            <tr th:if="${doctors == null or doctors.isEmpty()}">
+                <td colspan="6" class="text-center text-muted py-4">
+                    <i class="fas fa-user-md fa-2x mb-2 d-block"></i>
+                    暂无医生数据
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 医生详情模态窗口 -->
+    <div class="modal fade" id="doctorDetailModal" tabindex="-1" aria-labelledby="doctorDetailModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="doctorDetailModalLabel">医生详情</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">医生姓名：</label>
+                        <p id="modalDoctorName" class="mb-0">-</p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">电话绑定状态：</label>
+                        <p id="modalPhoneBound" class="mb-0">-</p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">职称：</label>
+                        <p id="modalTitle" class="mb-0">-</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</th:block>
+</html>

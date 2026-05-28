@@ -1,0 +1,98 @@
+<!-- 页面标题 -->
+<div class="page-header">
+    <h4><i class="fas fa-calendar-alt me-2"></i>我的预约</h4>
+    <p>管理您的预约记录</p>
+</div>
+
+<!-- 预约列表卡片 -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5><i class="fas fa-list me-2"></i>预约列表</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                <tr>
+                    <th>预约日期</th>
+                    <th>预约时间</th>
+                    <th>医生姓名</th>
+                    <th>科室</th>
+                    <th>状态</th>
+                    <th>操作</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:if="${appointments == null or #lists.isEmpty(appointments)}">
+                    <td colspan="6" class="text-center text-muted">暂无预约记录</td>
+                </tr>
+                <tr th:each="appointment : ${appointments}" th:attr="data-appointment-id=${appointment.id}">
+                    <td th:text="${#temporals.format(appointment.appointmentDate, 'yyyy-MM-dd')}">2025-12-23</td>
+                    <td th:text="${appointment.appointmentTime}">14:00</td>
+                    <td th:text="${appointment.doctorName}">张医生</td>
+                    <td th:text="${appointment.departmentName}">内科</td>
+                    <td>
+                        <span th:if="${appointment.status == '待确认'}" class="badge bg-warning">待确认</span>
+                        <span th:if="${appointment.status == '已确认'}" class="badge bg-success">已确认</span>
+                        <span th:if="${appointment.status == '已完成'}" class="badge bg-info">已完成</span>
+                        <span th:if="${appointment.status == '已取消'}" class="badge bg-secondary">已取消</span>
+                    </td>
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <!-- 查看详情按钮 -->
+                            <button class="btn btn-sm btn-outline-info rounded-circle p-2"
+                                    th:attr="data-action=view-appointment,data-id=${appointment.id}"
+                                    title="查看详情"
+                                    style="width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; padding: 0 !important;">
+                                <i class="fas fa-eye fa-sm"></i>
+                            </button>
+
+                            <!-- 取消预约按钮 -->
+                            <button class="btn btn-sm btn-outline-danger rounded-circle p-2"
+                                    th:if="${appointment.status == '待确认' or appointment.status == '已确认'}"
+                                    th:attr="data-action=cancel-appointment,data-id=${appointment.id}"
+                                    title="取消预约"
+                                    style="width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; padding: 0 !important;">
+                                <i class="fas fa-times fa-sm"></i>
+                            </button>
+
+                            <!-- 显示已取消/已完成状态 -->
+                            <span th:unless="${appointment.status == '待确认' or appointment.status == '已确认'}"
+                                  th:class="${appointment.status == '已取消' ? 'badge bg-secondary' : (appointment.status == '已完成' ? 'badge bg-info' : 'badge bg-success')}"
+                                  th:text="${appointment.status}"
+                                  class="d-flex align-items-center px-2 py-1"></span>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 取消预约
+    function cancelAppointment(appointmentId) {
+        if (confirm('确定要取消这个预约吗？')) {
+            fetch(`/patient/appointments/cancel/${appointmentId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            }).then(response => {
+                if (response.ok) {
+                    showToast('预约取消成功', 'success');
+                    // 刷新列表
+                    setTimeout(() => {
+                        loadContent('/patient/appointments', '我的预约');
+                    }, 1000);
+                } else {
+                    showToast('取消失败', 'danger');
+                }
+            }).catch(error => {
+                showToast('取消失败：网络异常', 'danger');
+                console.error('错误详情:', error);
+            });
+        }
+    }
+</script>

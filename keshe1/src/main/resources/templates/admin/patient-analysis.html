@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>患者分析 - 医疗健康管理系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" th:href="@{/css/unified-style.css}">
+</head>
+<body>
+<!-- 左侧侧边栏导航 -->
+<div class="sidebar" id="sidebar">
+    <!-- 侧边栏内容 -->
+</div>
+
+<!-- 主内容区域 -->
+<div class="main-content" id="mainContent">
+    <!-- 顶部标题栏 -->
+    <div class="page-header">
+        <div>
+            <h1>患者分析</h1>
+            <p>欢迎，<span id="userName" th:text="${user != null ? user.realName : '管理员'}">管理员</span>，分析患者数据</p>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-outline-custom" onclick="location.href='/admin/dashboard'">
+                <i class="fas fa-arrow-left"></i> 返回首页
+            </button>
+            <button class="btn btn-primary-custom" onclick="location.href='/logout'">
+                <i class="fas fa-sign-out-alt"></i> 退出
+            </button>
+        </div>
+    </div>
+
+    <!-- 加载指示器 -->
+    <div id="loading" class="alert alert-info text-center" style="display: none;">
+        <i class="fas fa-spinner fa-spin me-2"></i>正在加载数据...
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-chart-bar me-2"></i>患者病历数据分析</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label class="form-label">开始日期</label>
+                                <input type="date" id="startDate" class="form-control">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label class="form-label">结束日期</label>
+                                <input type="date" id="endDate" class="form-control">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label class="form-label">数据源</label>
+                                <select id="dataSource" class="form-select">
+                                    <option value="medical_record" selected>病历表数据</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label class="form-label">&nbsp;</label>
+                                <div>
+                                    <button class="btn btn-primary me-2" onclick="loadDateRangeAnalysis()">
+                                        <i class="fas fa-sync-alt me-1"></i>更新图表
+                                    </button>
+                                    <button class="btn btn-outline-primary" onclick="refreshData()">
+                                        <i class="fas fa-redo me-1"></i>刷新数据
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-chart-line me-2"></i>疾病趋势分析</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="diseaseTrendChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-chart-pie me-2"></i>疾病分布</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="diseaseDistributionChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-users me-2"></i>诊断对应患者列表</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="diagnosisPatientsTable">
+                            <thead>
+                            <tr>
+                                <th>患者ID</th>
+                                <th>姓名</th>
+                                <th>性别</th>
+                                <th>年龄</th>
+                                <th>操作</th>
+                            </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="patientRecordsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">历史病例</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-5">
+                            <ul class="list-group" id="recordsList"></ul>
+                        </div>
+                        <div class="col-md-7">
+                            <div id="recordDetail" class="border rounded p-3" style="min-height: 240px;"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-chart-bar me-2"></i>疾病统计柱状图</h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-muted text-center">已移除柱状图展示</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    let diseaseTrendChart = null;
+    let diseaseDistributionChart = null;
+    
+
+    // 初始化图表（安全方式）
+    function initCharts() {
+        console.log('初始化图表...');
+
+        // 趋势图
+        const trendCanvas = document.getElementById('diseaseTrendChart');
+        if (trendCanvas) {
+            const ctx = trendCanvas.getContext('2d');
+            diseaseTrendChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: '疾病数量',
+                        data: [],
+                        borderColor: 'rgb(75, 192, 192)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1,
+                                callback: function(value) {
+                                    return Number.isInteger(value) ? value : Math.round(value);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        } else {
+            console.error('找不到 diseaseTrendChart canvas 元素！');
+        }
+
+        // 饼图
+        const pieCanvas = document.getElementById('diseaseDistributionChart');
+        if (pieCanvas) {
+            const ctx = pieCanvas.getContext('2d');
+            diseaseDistributionChart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        data: [],
+                        backgroundColor: [
+                            'rgb(255, 99, 132)',
+                            'rgb(54, 162, 235)',
+                            'rgb(255, 205, 86)',
+                            'rgb(75, 192, 192)',
+                            'rgb(153, 102, 255)',
+                            'rgb(255, 159, 64)'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+        } else {
+            console.error('找不到 diseaseDistributionChart canvas 元素！');
+        }
+
+        console.log('图表初始化完成');
+    }
+    function loadDateRangeAnalysis() {
+        const start = document.getElementById('startDate').value;
+        const end = document.getElementById('endDate').value;
+        if (!start || !end) return;
+        const s = new Date(start);
+        const e = new Date(end);
+        if (isNaN(s.getTime()) || isNaN(e.getTime())) return;
+        if (s.getTime() > e.getTime()) return;
+        document.getElementById('loading').style.display = 'block';
+        Promise.all([
+            fetch(`/admin/api/patient-analysis/range-trend?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`)
+                .then(r => r.ok ? r.json() : Promise.resolve({})),
+            fetch(`/admin/api/patient-analysis/range-distribution?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`)
+                .then(r => r.ok ? r.json() : Promise.resolve([]))
+        ]).then(([trendData, distData]) => {
+            updateTrendChart(trendData);
+            updateDistributionChartRange(distData, start, end);
+        }).finally(() => {
+            document.getElementById('loading').style.display = 'none';
+        });
+    }
+
+    function updateTrendChart(trendData) {
+        if (!trendData || !Array.isArray(trendData.labels)) {
+            renderNoData('diseaseTrendChart', '暂无数据');
+            return;
+        }
+        const labels = trendData.labels;
+        const series = Array.isArray(trendData.series) ? trendData.series : [];
+        const palette = ['#5B8FF9','#61DDAA','#65789B','#F6BD16','#7262FD','#78D3F8','#F6903D','#FF7070','#73C0DE','#3CA0FF'];
+        const datasets = series.map((s, i) => ({
+            label: s.name || `疾病${i+1}`,
+            data: Array.isArray(s.data) ? s.data : [],
+            borderColor: palette[i % palette.length],
+            backgroundColor: 'transparent',
+            tension: 0.3,
+            fill: false,
+            pointRadius: 2
+        }));
+        const allZero = datasets.length === 0 || datasets.every(ds => (ds.data || []).reduce((s,v)=>s+(v||0),0) === 0);
+        if (allZero) {
+            renderNoData('diseaseTrendChart', '暂无数据');
+            return;
+        }
+        ensureTrendCanvas();
+        diseaseTrendChart.data.labels = labels;
+        diseaseTrendChart.data.datasets = datasets;
+        diseaseTrendChart.update();
+    }
+    function updateDistributionChartRange(distData, start, end) {
+        const labelsRaw = Array.isArray(distData) ? distData.map(d => d.name) : [];
+        const counts = Array.isArray(distData) ? distData.map(d => d.count || 0) : [];
+        const total = counts.reduce((s, v) => s + (v || 0), 0);
+        const labels = labelsRaw.map((l, i) => {
+            const pct = total > 0 ? Math.round((counts[i] / total) * 1000) / 10 : 0;
+            return `${l}（${pct}%）`;
+        });
+        if (total === 0 || labelsRaw.length === 0) {
+            renderNoData('diseaseDistributionChart', '暂无数据');
+            return;
+        }
+        ensureDistributionCanvas();
+        diseaseDistributionChart.data.labels = labels;
+        diseaseDistributionChart.data.datasets[0].data = counts;
+        diseaseDistributionChart.update();
+        const pieCanvas = document.getElementById('diseaseDistributionChart');
+        if (pieCanvas) {
+            pieCanvas.onclick = function(evt) {
+                const points = diseaseDistributionChart.getElementsAtEventForMode(evt, 'nearest', {intersect: true}, true);
+                if (!points || !points.length) return;
+                const idx = points[0].index;
+                const diag = labelsRaw[idx];
+                loadPatientsByDiagnosisRange(diag, start, end);
+            };
+        }
+    }
+
+    // 刷新数据
+    function refreshData() {
+        loadDateRangeAnalysis();
+    }
+    function loadPatientsByDiagnosisRange(diagnosis, start, end) {
+        const tbody = document.querySelector('#diagnosisPatientsTable tbody');
+        if (tbody) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-muted">加载中...</td></tr>';
+        }
+        fetch(`/admin/api/patient-analysis/patients-by-diagnosis-range?diagnosis=${encodeURIComponent(diagnosis)}&start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`)
+            .then(r => r.ok ? r.json() : [])
+            .then(list => {
+                if (!tbody) return;
+                if (!Array.isArray(list) || list.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-muted">暂无患者</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = '';
+                list.forEach(p => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML =
+                        `<td>${p.id || ''}</td>` +
+                        `<td>${p.name || ''}</td>` +
+                        `<td>${p.gender || ''}</td>` +
+                        `<td>${p.age != null ? p.age : ''}</td>` +
+                        `<td><button class="btn btn-sm btn-outline-primary" onclick="window.openPatientRecordsModal(${p.id})">查看病例</button></td>`;
+                    tbody.appendChild(tr);
+                });
+            })
+            .catch(() => {
+                if (tbody) tbody.innerHTML = '<tr><td colspan="5" class="text-danger">加载失败</td></tr>';
+            });
+    }
+
+    function renderNoData(canvasId, text) {
+        const el = document.getElementById(canvasId);
+        if (!el) return;
+        const parent = el.parentElement;
+        if (!parent) return;
+        parent.innerHTML = `<div class="text-muted text-center" style="padding: 40px 0;">${text}</div>`;
+        if (canvasId === 'diseaseTrendChart') diseaseTrendChart = null;
+        if (canvasId === 'diseaseDistributionChart') diseaseDistributionChart = null;
+    }
+    function ensureTrendCanvas() {
+        if (diseaseTrendChart) return;
+        const container = document.querySelector('#diseaseTrendChart')?.parentElement;
+        if (!container) return;
+        container.innerHTML = `<canvas id="diseaseTrendChart" height="300"></canvas>`;
+        const ctx = document.getElementById('diseaseTrendChart').getContext('2d');
+        diseaseTrendChart = new Chart(ctx, {
+            type: 'line',
+            data: { labels: [], datasets: [] },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { y: { beginAtZero: true, ticks: { stepSize: 1, callback: function(value){ return Number.isInteger(value) ? value : Math.round(value); } } } }
+            }
+        });
+    }
+    function ensureDistributionCanvas() {
+        if (diseaseDistributionChart) return;
+        const container = document.querySelector('#diseaseDistributionChart')?.parentElement;
+        if (!container) return;
+        container.innerHTML = `<canvas id="diseaseDistributionChart" height="300"></canvas>`;
+        const ctx = document.getElementById('diseaseDistributionChart').getContext('2d');
+        diseaseDistributionChart = new Chart(ctx, {
+            type: 'pie',
+            data: { labels: [], datasets: [{ data: [], backgroundColor: ['#5B8FF9','#61DDAA','#65789B','#F6BD16','#7262FD','#78D3F8','#F6903D'] }] },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+    }
+
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', function() {
+        initCharts();
+        const now = new Date();
+        const startInput = document.getElementById('startDate');
+        const endInput = document.getElementById('endDate');
+        if (startInput && endInput) {
+            const endStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+            const startDate = new Date(now.getTime() - 29*24*60*60*1000);
+            const startStr = `${startDate.getFullYear()}-${String(startDate.getMonth()+1).padStart(2,'0')}-${String(startDate.getDate()).padStart(2,'0')}`;
+            startInput.value = startStr;
+            endInput.value = endStr;
+        }
+        loadDateRangeAnalysis();
+    });
+</script>
+<script>
+    window.openPatientRecordsModal = function(patientId) {
+        const listEl = document.getElementById('recordsList');
+        const detailEl = document.getElementById('recordDetail');
+        if (listEl) listEl.innerHTML = '';
+        if (detailEl) detailEl.innerHTML = '';
+        fetch('/admin/api/patients/' + encodeURIComponent(patientId) + '/medical-records')
+            .then(r => r.ok ? r.json() : [])
+            .then(data => {
+                if (!Array.isArray(data) || data.length === 0) {
+                    if (listEl) listEl.innerHTML = '<li class="list-group-item text-muted">暂无病历记录</li>';
+                } else {
+                    data.forEach(item => {
+                        const li = document.createElement('li');
+                        li.className = 'list-group-item d-flex justify-content-between align-items-center';
+                        const left = document.createElement('div');
+                        left.innerHTML = '<div class="fw-bold">' + (item.diagnosis || '未填写诊断') + '</div>' +
+                            '<div class="text-muted small">' + (item.visitDate || '') + ' · ' +
+                            (item.doctorName || '') + ' · ' + (item.departmentName || '') + '</div>';
+                        const btn = document.createElement('button');
+                        btn.className = 'btn btn-sm btn-outline-primary';
+                        btn.textContent = '查看';
+                        btn.onclick = function() { viewRecordDetail(item.id); };
+                        li.appendChild(left);
+                        li.appendChild(btn);
+                        listEl.appendChild(li);
+                    });
+                }
+                const modal = new bootstrap.Modal(document.getElementById('patientRecordsModal'));
+                modal.show();
+            })
+            .catch(() => {
+                if (listEl) listEl.innerHTML = '<li class="list-group-item text-danger">加载失败</li>';
+            });
+    };
+    function viewRecordDetail(recordId) {
+        const el = document.getElementById('recordDetail');
+        if (el) el.innerHTML = '<div class="text-muted">加载中...</div>';
+        fetch('/admin/api/medical-records/' + encodeURIComponent(recordId))
+            .then(r => r.ok ? r.json() : null)
+            .then(rec => {
+                if (!rec) {
+                    if (el) el.innerHTML = '<div class="text-danger">未找到记录</div>';
+                    return;
+                }
+                const html = [
+                    '<div class="mb-2"><span class="fw-bold">就诊日期：</span>' + (rec.visitDate || '') + '</div>',
+                    '<div class="mb-2"><span class="fw-bold">诊断：</span>' + (rec.diagnosis || '') + '</div>',
+                    '<div class="mb-2"><span class="fw-bold">主诉：</span>' + (rec.chiefComplaint || '') + '</div>',
+                    '<div class="mb-2"><span class="fw-bold">现病史：</span>' + (rec.presentIllness || '') + '</div>',
+                    '<div class="mb-2"><span class="fw-bold">既往史：</span>' + (rec.pastIllness || '') + '</div>',
+                    '<div class="mb-2"><span class="fw-bold">体格检查：</span>' + (rec.physicalExamination || '') + '</div>',
+                    '<div class="mb-2"><span class="fw-bold">辅助检查：</span>' + (rec.auxiliaryExamination || '') + '</div>',
+                    '<div class="mb-2"><span class="fw-bold">治疗方案：</span>' + (rec.treatmentPlan || '') + '</div>'
+                ].join('');
+                if (el) el.innerHTML = html;
+            })
+            .catch(() => {
+                if (el) el.innerHTML = '<div class="text-danger">加载失败</div>';
+            });
+    }
+</script>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+</body>
+</html>

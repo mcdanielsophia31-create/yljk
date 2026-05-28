@@ -1,0 +1,239 @@
+<div class="container-fluid">
+    <div class="dashboard-header">
+        <div>
+            <h1>科室管理</h1>
+            <p>管理科室列表，创建与修改均为弹窗</p>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-outline-custom" onclick="location.href='/admin/profile'">
+                <i class="fas fa-cog"></i> 设置
+            </button>
+            <button class="btn btn-primary-custom" onclick="location.href='/logout'">
+                <i class="fas fa-sign-out-alt"></i> 退出
+            </button>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-12">
+            <div class="card p-3">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="input-group" style="max-width: 420px;">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        <input id="deptSearchInput" type="text" class="form-control" placeholder="搜索科室名称" />
+                        <button class="btn btn-outline-primary" onclick="window.searchDepartments()">
+                            搜索
+                        </button>
+                    </div>
+                    <button class="btn btn-primary" onclick="window.openCreateDepartmentModal()">
+                        <i class="fas fa-plus"></i> 创建科室
+                    </button>
+                </div>
+
+                <div id="deptDebug" class="alert alert-info d-none"></div>
+
+                <div class="table-responsive">
+                    <table id="departmentTable" class="table table-striped table-hover">
+                        <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>科室名称</th>
+                            <th>描述</th>
+                            <th>创建时间</th>
+                            <th>操作</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr><td colspan="5" class="text-center">加载中...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 统计与医生调整模块已移除 -->
+    </div>
+
+    <!-- 创建/编辑科室 Modal -->
+    <div class="modal fade" id="departmentModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="departmentModalTitle">创建科室</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="deptIdInput" />
+                    <div class="mb-3">
+                        <label class="form-label">科室名称</label>
+                        <input type="text" id="deptNameInput" class="form-control" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">科室描述</label>
+                        <input type="text" id="deptDescInput" class="form-control" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button class="btn btn-primary" onclick="window.submitDepartment()">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 删除科室 Modal -->
+    <div class="modal fade" id="deleteDepartmentModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">删除科室</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    确认删除该科室？此操作不可恢复。
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button class="btn btn-danger" id="confirmDeleteDeptBtn">删除</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 医生列表与调整模块已移除 -->
+
+    <script>
+        window.searchDepartments = function () {
+            const keyword = document.getElementById('deptSearchInput').value.trim();
+            window.loadDepartmentList(keyword);
+        };
+
+        window.openCreateDepartmentModal = function () {
+            document.getElementById('departmentModalTitle').textContent = '创建科室';
+            document.getElementById('deptIdInput').value = '';
+            document.getElementById('deptNameInput').value = '';
+            document.getElementById('deptDescInput').value = '';
+            new bootstrap.Modal(document.getElementById('departmentModal')).show();
+        };
+
+        window.openEditDepartmentModal = function (id) {
+            fetch('/admin/departments/' + id)
+                .then(r => r.text())
+                .then(text => {
+                    try { return JSON.parse(text); } catch(e) {
+                        if (text.includes('<title>登录')) { location.href='/login'; return null; }
+                        throw new Error('响应不是JSON');
+                    }
+                })
+                .then(d => {
+                    if (!d) return;
+                    document.getElementById('departmentModalTitle').textContent = '修改科室';
+                    document.getElementById('deptIdInput').value = d.id || '';
+                    document.getElementById('deptNameInput').value = d.name || '';
+                    document.getElementById('deptDescInput').value = d.description || '';
+                    new bootstrap.Modal(document.getElementById('departmentModal')).show();
+                })
+                .catch(e => alert(e));
+        };
+
+        window.submitDepartment = function () {
+            const id = document.getElementById('deptIdInput').value || null;
+            const payload = {
+                id: id ? Number(id) : null,
+                name: document.getElementById('deptNameInput').value.trim(),
+                description: document.getElementById('deptDescInput').value.trim()
+            };
+            fetch('/admin/departments/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+                .then(r => r.text())
+                .then(msg => {
+                    bootstrap.Modal.getInstance(document.getElementById('departmentModal')).hide();
+                    window.loadDepartmentList();
+                })
+                .catch(e => alert('保存失败: ' + e));
+        };
+
+        window.openDeleteDepartmentModal = function (id) {
+            const modalEl = document.getElementById('deleteDepartmentModal');
+            const btn = document.getElementById('confirmDeleteDeptBtn');
+            btn.onclick = function () {
+                fetch('/admin/departments/' + id, { method: 'DELETE' })
+                    .then(r => r.text())
+                    .then(msg => {
+                        bootstrap.Modal.getInstance(modalEl).hide();
+                        window.loadDepartmentList();
+                    })
+                    .catch(e => alert('删除失败: ' + e));
+            };
+            new bootstrap.Modal(modalEl).show();
+        };
+
+        window.loadDepartmentList = function (keyword = '') {
+            const tbody = document.querySelector('#departmentTable tbody');
+            const dbg = document.getElementById('deptDebug');
+            if (dbg) { dbg.classList.remove('d-none'); dbg.textContent = '正在加载科室列表...'; }
+            fetch('/admin/departments/list' + (keyword ? ('?keyword=' + encodeURIComponent(keyword)) : ''))
+                .then(r => r.text())
+                .then(text => {
+                    try { return JSON.parse(text); } catch(e) {
+                        if (text.includes('<title>登录')) {
+                            location.href='/login'; return [];
+                        }
+                        throw new Error('响应不是JSON');
+                    }
+                })
+                .then(list => {
+                    if (dbg) { dbg.textContent = '加载成功，共 ' + list.length + ' 条'; setTimeout(() => dbg.classList.add('d-none'), 1500); }
+                    tbody.innerHTML = '';
+                    if (!list || list.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="5" class="text-center">暂无科室</td></tr>';
+                        return;
+                    }
+                    list.forEach(d => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${d.id}</td>
+                            <td>${d.name || '-'}</td>
+                            <td>${d.description || '-'}</td>
+                            <td>${d.createdTime ? (d.createdTime.replace('T', ' ').substring(0, 19)) : '-'}</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary me-1" onclick="window.openEditDepartmentModal(${d.id})">
+                                    <i class="fas fa-edit"></i> 修改
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="window.openDeleteDepartmentModal(${d.id})">
+                                    <i class="fas fa-trash"></i> 删除
+                                </button>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                })
+                .catch(e => {
+                    if (dbg) { dbg.classList.remove('alert-info'); dbg.classList.add('alert-danger'); dbg.textContent = '加载失败: ' + e; }
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-danger text-center">加载失败</td></tr>';
+                });
+        };
+        // 统计与医生调整相关方法已移除
+
+        (function () {
+            window.loadDepartmentList();
+            const input = document.getElementById('deptSearchInput');
+            if (input) {
+                input.addEventListener('keyup', function (e) {
+                    if (e.key === 'Enter') {
+                        window.searchDepartments();
+                    }
+                });
+                input.addEventListener('input', function () {
+                    const v = input.value.trim();
+                    if (v.length === 0) {
+                        window.loadDepartmentList();
+                    }
+                });
+            }
+        })();
+    </script>
+</div>

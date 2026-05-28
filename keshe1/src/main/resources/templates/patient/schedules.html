@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>医生排班 - 医疗健康管理系统</title>
+    <!-- 引入Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- 引入Font Awesome图标 -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .content-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            margin-top: 20px;
+        }
+
+        .card-title {
+            color: #2D3748;
+            font-weight: 600;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #E2E8F0;
+        }
+
+        .table {
+            margin-bottom: 0;
+        }
+
+        .table th {
+            background: #F7FAFC;
+            color: #2D3748;
+            font-weight: 600;
+            border-top: none;
+        }
+
+        .table td {
+            vertical-align: middle;
+        }
+
+        .table-striped tbody tr:nth-of-type(odd) {
+            background-color: #F8F9FA;
+        }
+
+        .table-striped tbody tr:hover {
+            background-color: #E6FFFA;
+        }
+
+        .btn {
+            border-radius: 8px;
+            padding: 6px 12px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn-outline-primary {
+            color: #36B37E;
+            border-color: #36B37E;
+        }
+
+        .btn-outline-primary:hover {
+            background: #36B37E;
+            color: white;
+            border-color: #36B37E;
+        }
+    </style>
+</head>
+<body>
+<!-- 医生排班内容 -->
+<div class="content-card">
+    <h4 class="card-title"><i class="fas fa-list me-2"></i>医生列表</h4>
+
+    <div class="table-responsive">
+        <table class="table table-striped table-hover" id="doctorScheduleTable">
+            <thead>
+            <tr>
+                <th><i class="fas fa-user-md me-1"></i>医生工号</th>
+                <th><i class="fas fa-building me-1"></i>科室</th>
+                <th><i class="fas fa-award me-1"></i>职称</th>
+                <th><i class="fas fa-stethoscope me-1"></i>专长</th>
+                <th><i class="fas fa-cogs me-1"></i>操作</th>
+            </tr>
+            </thead>
+            <tbody>
+            <!-- 直接使用Doctor实体已有的属性 -->
+            <tr th:each="doctor : ${doctors}" class="doctor-row">
+                <td>
+                    <i class="fas fa-user-md me-1"></i>
+                    <span th:text="${doctor.employeeId}">未设置工号</span>
+                </td>
+                <td>
+                    <i class="fas fa-building me-1"></i>
+                    <span th:text="${doctor.departmentName}">未设置科室</span>
+                </td>
+                <td>
+                    <i class="fas fa-award me-1"></i>
+                    <span th:text="${doctor.title}">未设置职称</span>
+                </td>
+                <td>
+                    <i class="fas fa-stethoscope me-1"></i>
+                    <span th:text="${doctor.specialty}">未设置专长</span>
+                </td>
+                <td>
+                    <button class="btn btn-outline-primary btn-sm make-appointment-btn"
+                            th:attr="data-doctor-id=${doctor.id},
+                 data-doctor-employee-id=${doctor.employeeId},
+                 data-doctor-department=${doctor.departmentName},
+                 data-doctor-title=${doctor.title},
+                 data-doctor-specialty=${doctor.specialty}"
+                            onclick="showAppointmentModal(this)">
+                        <i class="fas fa-calendar-plus me-1"></i>预约
+                    </button>
+                </td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(doctors)}">
+                <td colspan="5" class="text-center text-muted">
+                    <i class="fas fa-info-circle me-2"></i>暂无医生排班信息
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="modal fade" id="appointmentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-calendar-plus me-2"></i>
+                    预约挂号
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- 医生信息 -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6 class="fw-bold mb-3">医生信息</h6>
+                                <div class="mb-2">
+                                    <span class="text-muted me-2">工号：</span>
+                                    <span id="modalDoctorEmployeeId">-</span>
+                                </div>
+                                <div class="mb-2">
+                                    <span class="text-muted me-2">科室：</span>
+                                    <span id="modalDoctorDepartment">-</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="fw-bold mb-3">&nbsp;</h6>
+                                <div class="mb-2">
+                                    <span class="text-muted me-2">职称：</span>
+                                    <span id="modalDoctorTitle">-</span>
+                                </div>
+                                <div class="mb-2">
+                                    <span class="text-muted me-2">专长：</span>
+                                    <span id="modalDoctorSpecialty">-</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 预约表单 -->
+                <form id="appointmentForm">
+                    <input type="hidden" id="appointmentDoctorId" name="doctorId">
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="appointmentDate" class="form-label fw-bold">
+                                <i class="fas fa-calendar-day me-1"></i>预约日期
+                            </label>
+                            <input type="date"
+                                   class="form-control"
+                                   id="appointmentDate"
+                                   name="appointmentDate"
+                                   required
+                                   min="">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="timeSlot" class="form-label fw-bold">
+                                <i class="fas fa-clock me-1"></i>时间段
+                            </label>
+                            <select class="form-select" id="timeSlot" name="timeSlot" required>
+                                <option value="">请选择时间段</option>
+                                <option value="morning">上午 (08:00-12:00)</option>
+                                <option value="afternoon">下午 (14:00-18:00)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="reason" class="form-label fw-bold">
+                            <i class="fas fa-comment-medical me-1"></i>病症描述
+                        </label>
+                        <textarea class="form-control"
+                                  id="reason"
+                                  name="reason"
+                                  rows="3"
+                                  placeholder="请详细描述您的症状、持续时间和不适感..."
+                                  required></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="pastIllness" class="form-label fw-bold">
+                            <i class="fas fa-file-medical me-1"></i>既往病史
+                        </label>
+                        <textarea class="form-control"
+                                  id="pastIllness"
+                                  name="pastIllness"
+                                  rows="2"
+                                  placeholder="请填写相关既往病史（选填）"></textarea>
+                        <div class="form-text">请填写与本次就诊相关的既往病史，如高血压、糖尿病等</div>
+                    </div>
+
+                    <!-- 提交状态 -->
+                    <div id="appointmentStatus" class="alert" style="display: none;"></div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary-custom" onclick="loadAppointmentManagement(); return false;">
+                    <i class="fas fa-paper-plane me-1"></i>提交预约
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- 引入Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    // 简单的搜索功能
+    function searchDoctors() {
+        const searchTerm = document.getElementById('doctorSearch').value.toLowerCase();
+        const rows = document.querySelectorAll('.doctor-row');
+
+        rows.forEach(row => {
+            const doctorEmployeeId = row.cells[0].textContent.toLowerCase();
+            const department = row.cells[1].textContent.toLowerCase();
+            const specialty = row.cells[3].textContent.toLowerCase();
+
+            if (searchTerm === '' ||
+                doctorEmployeeId.includes(searchTerm) ||
+                department.includes(searchTerm) ||
+                specialty.includes(searchTerm)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    }
+
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log("医生排班页面加载完成");
+
+        // 为所有预约按钮添加事件监听
+        const appointmentButtons = document.querySelectorAll('.make-appointment-btn');
+        appointmentButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const doctorId = this.getAttribute('data-doctor-id');
+                if (doctorId) {
+                    window.location.href = `/patient/appointments/make?doctorId=${doctorId}`;
+                } else {
+                    console.error('未找到医生ID');
+                }
+            });
+        });
+    });
+
+    // 简单的搜索功能
+    function searchDoctors() {
+        const searchTerm = document.getElementById('doctorSearch').value.toLowerCase();
+        const rows = document.querySelectorAll('.doctor-row');
+
+        rows.forEach(row => {
+            const doctorEmployeeId = row.cells[0].textContent.toLowerCase();
+            const department = row.cells[1].textContent.toLowerCase();
+            const specialty = row.cells[3].textContent.toLowerCase();
+
+            if (searchTerm === '' ||
+                doctorEmployeeId.includes(searchTerm) ||
+                department.includes(searchTerm) ||
+                specialty.includes(searchTerm)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    }
+
+    function showAppointmentModal(button) {
+        const doctorId = button.getAttribute('data-doctor-id');
+        const doctorEmployeeId = button.getAttribute('data-doctor-employee-id');
+        const doctorDepartment = button.getAttribute('data-doctor-department');
+        const doctorTitle = button.getAttribute('data-doctor-title');
+        const doctorSpecialty = button.getAttribute('data-doctor-specialty');
+
+        // 设置弹框中的医生信息
+        document.getElementById('modalDoctorEmployeeId').textContent = doctorEmployeeId;
+        document.getElementById('modalDoctorDepartment').textContent = doctorDepartment;
+        document.getElementById('modalDoctorTitle').textContent = doctorTitle;
+        document.getElementById('modalDoctorSpecialty').textContent = doctorSpecialty;
+        document.getElementById('appointmentDoctorId').value = doctorId;
+
+        // 设置最小日期为明天
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const minDate = tomorrow.toISOString().split('T')[0];
+        document.getElementById('appointmentDate').min = minDate;
+
+        // 如果最小日期为空，设置为明天
+        const appointmentDateInput = document.getElementById('appointmentDate');
+        if (!appointmentDateInput.value) {
+            appointmentDateInput.value = minDate;
+        }
+
+        // 清空表单
+        document.getElementById('reason').value = '';
+        document.getElementById('pastIllness').value = '';
+        document.getElementById('appointmentStatus').style.display = 'none';
+
+        // 显示弹框
+        const modal = new bootstrap.Modal(document.getElementById('appointmentModal'));
+        modal.show();
+    }
+
+    // 提交预约
+    function submitAppointment() {
+        const form = document.getElementById('appointmentForm');
+        const statusDiv = document.getElementById('appointmentStatus');
+
+        // 验证表单
+        if (!form.checkValidity()) {
+            form.classList.add('was-validated');
+            return;
+        }
+
+        // 收集表单数据
+        const formData = {
+            doctorId: document.getElementById('appointmentDoctorId').value,
+            appointmentDate: document.getElementById('appointmentDate').value,
+            timeSlot: document.getElementById('timeSlot').value,
+            reason: document.getElementById('reason').value,
+            pastIllness: document.getElementById('pastIllness').value
+        };
+
+        console.log("提交预约数据：", formData);
+
+        // 显示加载状态
+        const submitBtn = document.querySelector('#appointmentModal .btn-primary-custom');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>提交中...';
+
+        // 清空状态提示
+        statusDiv.style.display = 'none';
+        statusDiv.className = 'alert';
+
+        // 发送AJAX请求到后端
+        fetch('/patient/appointments/make-ajax', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify(formData)
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP错误! 状态码: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log("预约响应：", data);
+
+                if (data.success) {
+                    // 成功
+                    statusDiv.className = 'alert alert-success';
+                    statusDiv.innerHTML = `
+                <i class="fas fa-check-circle me-2"></i>
+                <strong>预约成功！</strong> ${data.msg}
+            `;
+                    statusDiv.style.display = 'block';
+
+                    // 3秒后关闭弹框并刷新页面
+                    setTimeout(() => {
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('appointmentModal'));
+                        modal.hide();
+
+                        // 刷新预约列表
+                        if (typeof loadContent === 'function') {
+                            loadContent('/patient/appointments', '我的预约');
+                        } else {
+                            location.reload();
+                        }
+                    }, 3000);
+                } else {
+                    // 失败
+                    statusDiv.className = 'alert alert-danger';
+                    statusDiv.innerHTML = `
+                <i class="fas fa-exclamation-circle me-2"></i>
+                <strong>预约失败！</strong> ${data.msg}
+            `;
+                    statusDiv.style.display = 'block';
+
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalText;
+                }
+            })
+            .catch(error => {
+                console.error('提交预约失败:', error);
+
+                statusDiv.className = 'alert alert-danger';
+                statusDiv.innerHTML = `
+            <i class="fas fa-exclamation-circle me-2"></i>
+            <strong>网络错误！</strong> 请检查网络连接后重试
+        `;
+                statusDiv.style.display = 'block';
+
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            });
+    }
+
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log("医生排班页面加载完成");
+
+        // 为所有预约按钮添加事件监听（如果按钮已经绑定了onclick，这个可以作为备份）
+        const appointmentButtons = document.querySelectorAll('.make-appointment-btn');
+        appointmentButtons.forEach(button => {
+            button.addEventListener('click', function(e) {
+                // 防止默认行为
+                e.preventDefault();
+
+                const doctorId = this.getAttribute('data-doctor-id');
+                if (doctorId) {
+                    showAppointmentModal(this);
+                } else {
+                    console.error('未找到医生ID');
+                }
+            });
+        });
+
+        // 为日期选择器设置默认值
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const minDate = tomorrow.toISOString().split('T')[0];
+        const appointmentDateInput = document.getElementById('appointmentDate');
+        if (appointmentDateInput) {
+            appointmentDateInput.min = minDate;
+            appointmentDateInput.value = minDate;
+        }
+    });
+</script>
+</body>
+</html>

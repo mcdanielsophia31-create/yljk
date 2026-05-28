@@ -1,0 +1,2134 @@
+<div class="container-fluid">
+    <!-- 顶部标题栏 -->
+    <div class="dashboard-header">
+        <div>
+            <h1>医生总体排班</h1>
+            <p>查看和管理所有医生的排班信息</p>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-outline-custom" onclick="location.href='/admin/profile'">
+                <i class="fas fa-cog"></i> 设置
+            </button>
+            <button class="btn btn-primary-custom" onclick="location.href='/logout'">
+                <i class="fas fa-sign-out-alt"></i> 退出
+            </button>
+        </div>
+    </div>
+
+    <style>
+        .week-schedule-matrix {
+            margin-top: 20px;
+        }
+
+        .schedule-slot {
+            min-height: 80px;
+            border: 1px dashed #dee2e6;
+            position: relative;
+        }
+
+        .schedule-slot:hover {
+            background-color: #f8f9fa;
+        }
+
+        .schedule-slot button {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+        }
+
+        .table th, .table td {
+            vertical-align: middle !important;
+            padding: 0.25rem 0.25rem !important; /* 减少水平内边距 */
+        }
+
+        .schedule-table-container {
+            flex: 0 0 70%; /* 占据70%宽度 */
+            overflow-x: auto;
+            height: 600px; /* 固定高度 */
+            overflow-y: auto; /* 添加垂直滚动条 */
+        }
+
+        .table {
+            width: 100% !important; /* 表格占满容器 */
+            margin: 0;
+        }
+
+        .time-period-cell {
+            background-color: #f8f9fa !important; /* 浅灰色背景 */
+            color: #495057;
+            font-weight: bold;
+            cursor: default !important; /* 无点击反应 */
+            pointer-events: none !important; /* 禁用所有鼠标事件 */
+            width: 80px !important; /* 增加宽度，确保年份月份显示在同一行 */
+            max-width: 80px !important;
+        }
+
+        #monthHeader {
+            width: 80px; /* 增加宽度，确保年份月份显示在同一行 */
+            max-width: 80px;
+        }
+
+        .table th:not(.time-period-cell):not(#monthHeader), .table td:not(.time-period-cell) {
+            width: calc((100% - 80px) / 7) !important; /* 让其他列平均分配剩余宽度 */
+        }
+        
+        /* 确保表格整体宽度为100% */
+        .table {
+            table-layout: fixed !important;
+        }
+
+        /* 确保表格总宽度为70% */
+        .schedule-table-container {
+            flex: 0 0 70%;
+            overflow-x: auto;
+            height: 600px; /* 固定高度 */
+            overflow-y: auto; /* 添加垂直滚动条 */
+        }
+
+        .function-panel {
+            flex: 0 0 30%;
+            border-left: 2px solid #dee2e6 !important;
+            padding-left: 30px; /* 增加左边距，让分隔线与表格有距离 */
+            margin-left: 10px; /* 添加左边距，进一步增加与表格的距离 */
+            height: 600px; /* 保持与表格容器相同的高度 */
+            display: flex; /* 使用flex布局 */
+            flex-direction: column; /* 垂直方向排列 */
+            /* 移除滚动条，让内容固定 */
+        }
+
+        /* 确保容器有明确的高度 */
+        .week-schedule-matrix {
+            height: 620px; /* 设置固定高度，略高于表格容器以容纳边框等 */
+        }
+
+        .week-schedule-matrix .d-flex {
+            height: 600px; /* 与表格容器高度一致 */
+        }
+
+        /* 更具体的选择器确保分割线显示 */
+        .week-schedule-matrix .d-flex > .function-panel {
+            border-left: 2px solid #dee2e6 !important;
+            height: 600px; /* 与表格容器保持相同高度 */
+        }
+
+
+
+        .table {
+            margin-bottom: 0; /* 减少表格底部边距 */
+        }
+
+        /* 确保表格行有足够高度 */
+        .table tbody tr {
+            min-height: 120px;
+            height: 120px;
+        }
+
+        .table tbody tr td {
+            min-height: 120px !important;
+            height: 120px !important;
+            vertical-align: middle;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 2px;
+            margin-top: 10px;
+        }
+
+        .calendar-day {
+            padding: 5px;
+            text-align: center;
+            border: 1px solid #dee2e6;
+            cursor: pointer;
+            background-color: #fff;
+        }
+
+        .calendar-day.today {
+            background-color: #007bff;
+            color: white;
+            font-weight: bold;
+        }
+
+        .calendar-day.selected-week {
+            border: 2px solid #007bff;
+            font-weight: bold;
+        }
+
+        .schedule-cell {
+            border: 1px solid #dee2e6;
+            padding: 20px 5px;
+            text-align: center;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            min-height: 120px;
+            height: 120px;
+            /* 确保悬停效果只影响单个单元格 */
+            isolation: isolate;
+        }
+
+        .schedule-cell:hover {
+            background-color: #d1ecf1 !important;
+            position: relative;
+            z-index: 1;
+        }
+        
+        /* 确保已过时间的单元格悬停时仍保持灰色 */
+        /* 保持悬停效果，但确保选中的已过时间单元格保持青色高亮 */
+        .schedule-cell.past.selected:hover {
+            background-color: #d1ecf1 !important;
+            border-color: #0c5460 !important;
+            color: inherit !important;
+        }
+
+        /* 移除表格行悬停效果的整体规则，仅保留单元格悬停效果 */
+        .table tbody tr:hover {
+            background-color: transparent !important;
+        }
+
+        /* 确保表格行中的非悬停单元格保持其原有样式 */
+        .table tbody tr:hover > .schedule-cell:not(:hover) {
+            /* 不覆盖背景色，让单元格保持其原有状态 */
+        }
+
+        .schedule-cell.selected {
+            background-color: #d1ecf1;
+            border-color: #0c5460;
+        }
+        
+        /* 确保选中的已过时间单元格仍显示青色高亮 */
+        .schedule-cell.past.selected {
+            background-color: #d1ecf1 !important;
+            border-color: #0c5460;
+            color: inherit;
+        }
+
+        .schedule-cell.past {
+            background-color: #e9ecef;
+            color: #6c757d;
+        }
+
+        /* 区域分隔线 */
+        .card-body + .card-header {
+            border-top: 2px solid #dee2e6;
+            margin-top: 20px;
+            padding-top: 15px;
+        }
+
+        .card-body {
+            border-bottom: 1px solid #dee2e6;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+        }
+
+        .doctor-list-container {
+            max-height: 300px; /* 增加高度以显示更多医生 */
+            overflow-y: auto; /* 启用垂直滚动条 */
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            margin-top: 10px;
+        }
+        
+        .doctor-list-container div {
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+        
+        .doctor-list-container label {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            justify-content: space-between;
+        }
+        
+        .doctor-list-container input.quota-input {
+            margin-left: 0.5rem;
+            margin-right: 0.5rem;
+            width: 60px;
+        }
+        
+
+
+        .quota-input {
+            width: 50px;
+            display: inline-block;
+            text-align: center;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            padding: 2px;
+        }
+
+        .quota-input:focus {
+            border-color: #80bdff;
+            outline: 0;
+        }
+
+        /* 确保下拉按钮鼠标悬停时无颜色变化 */
+        .btn-outline-secondary.dropdown-toggle:hover {
+            background-color: transparent !important;
+            border-color: #ced4da !important;
+            color: #495057 !important;
+        }
+
+        .btn-outline-secondary.dropdown-toggle:focus {
+            box-shadow: 0 0 0 0.2rem rgba(0,0,0,0) !important; /* 移除焦点阴影 */
+        }
+
+        /* 科室下拉框样式 - 限制显示5个选项并允许滚动 */
+        select#departmentSelect {
+            height: calc(2.375rem + 2px); /* 默认select高度 */
+            overflow-y: auto;
+        }
+
+
+
+
+
+        /* 周次选择按钮样式 - 使用更具体的选择器 */
+        .dropdown .btn#weekSelectBtn {
+            border: 1px solid #ced4da !important; /* 确保灰色边框 */
+            background-color: white !important; /* 保持白色背景 */
+            color: #495057 !important; /* 确保文字颜色 */
+        }
+
+        /* 周次选择按钮激活状态（展开时）样式 */
+        .dropdown .btn#weekSelectBtn.show, .dropdown .btn#weekSelectBtn.show:hover, .dropdown .btn#weekSelectBtn.show:focus {
+            border-color: #28a745 !important; /* 绿色边框 */
+            background-color: white !important; /* 保持白色背景 */
+            box-shadow: 0 0 0 0.2rem rgba(40,167,69,.25) !important; /* 绿色焦点阴影 */
+        }
+
+        /* 周次选择按钮悬停样式 */
+        .dropdown .btn#weekSelectBtn:hover {
+            border-color: #adb5bd !important; /* 悬停时边框颜色 */
+            background-color: white !important; /* 保持白色背景 */
+        }
+
+        /* 确保焦点样式 */
+        .dropdown .btn#weekSelectBtn:focus {
+            border-color: #28a745 !important; /* 绿色边框 */
+            box-shadow: 0 0 0 0.2rem rgba(40,167,69,.25) !important; /* 绿色焦点阴影 */
+        }
+        
+        /* 功能区样式 */
+        .function-panel {
+            min-height: auto; /* 自适应高度 */
+            height: fit-content; /* 高度根据内容调整 */
+        }
+        
+        /* 配置区标题样式 */
+        #configPanel h5 {
+            font-weight: bold;
+            font-size: 1.25rem;
+        }
+        
+        /* 选中的日期样式 */
+        .calendar-day.selected {
+            border: 2px solid #007bff;
+            border-radius: 4px;
+            background-color: #e7f3ff;
+        }
+        
+        /* 减少诊号/诊室提示和已选医生统计之间的间距 */
+        #quotaHintSection {
+            margin-bottom: 0.125rem !important; /* 进一步减少底部间距 */
+        }
+        
+        #selectedStatsSection {
+            margin-top: 0.125rem !important; /* 进一步减少顶部间距 */
+        }
+        
+        /* 减少医生列表中姓名和诊号之间的间距 */
+        .doctor-list-container span {
+            display: flex;
+            align-items: center;
+            flex: 1;
+            margin-left: 0.25rem; /* 减少左边距 */
+        }
+        
+        /* 减少已选医生统计中标题和内容之间的间距 */
+        #selectedStatsSection p {
+            margin-bottom: 0.125rem !important; /* 进一步减少底部间距 */
+        }
+        
+        /* 配置区各部分标题加粗加大 */
+        #configPanel h6 {
+            margin-bottom: 1rem !important; /* 段后空1行 */
+            font-weight: bold !important;
+            font-size: 1.1em !important; /* 加大字号 */
+        }
+        
+        /* 减少配置区各部分之间的间距 */
+        #doctorListSection, #quotaHintSection, #selectedStatsSection {
+            margin-bottom: 0.25rem; /* 减少各部分之间的间距 */
+        }
+        
+        /* 确保section之间没有额外的空白间距 */
+        #configPanel > div {
+            line-height: 1.5;
+        }
+        
+        /* 确保配置区各部分之间有适当间距 */
+        #doctorListSection, #quotaHintSection, #selectedStatsSection {
+            margin-top: 0 !important;
+            margin-bottom: 0.5rem !important; /* 增加间距 */
+            flex-shrink: 0; /* 防止flex项目收缩 */
+        }
+        
+        /* 特别减少诊号提示和已选统计之间的间距 */
+        #quotaHintSection {
+            margin-bottom: 0.125rem !important;
+        }
+        
+        #selectedStatsSection {
+            margin-top: 0 !important;
+            margin-bottom: 0.25rem !important;
+        }
+        
+        /* 确保配置区内部元素紧凑排列 */
+        #configPanel {
+            line-height: 1.6;
+            height: auto; /* 自适应高度，不强制占满父容器 */
+        }
+        
+        /* 配置区内部flex容器紧凑布局 */
+        #configPanel > .d-flex {
+            display: flex;
+            flex-direction: column;
+            height: auto; /* 自适应高度 */
+        }
+
+
+
+
+        /* 修复配置区空白问题 */
+        #configPanel .d-flex {
+            gap: 0.125rem !important;
+        }
+
+        #configPanel h5 {
+            margin-bottom: 1rem !important;
+            font-size: 1.3rem !important;
+            color: #212529;
+        }
+
+        #configPanel h6 {
+            margin-bottom: 0.5rem !important;
+            font-size: 1.1rem !important;
+            line-height: 1.4 !important;
+            font-weight: bold;
+            color: #495057;
+        }
+
+        #configPanel p {
+            margin-bottom: 0.25rem !important;
+            line-height: 1.5 !important;
+            font-size: 1rem !important;
+            color: #6c757d;
+        }
+        
+        /* 悬停提示框样式 */
+        .tooltip-info {
+            position: absolute;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            z-index: 1000;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+        
+        .tooltip-info::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: rgba(0, 0, 0, 0.8) transparent transparent transparent;
+        }
+
+        /* 特别针对已选医生统计部分 */
+        #selectedStatsSection {
+            margin-top: 0 !important;
+            margin-bottom: 0.25rem !important;
+            padding-top: 0.125rem !important;
+            padding-bottom: 0.125rem !important;
+        }
+
+        /* 移除已选医生统计标题中的多余div样式 */
+        #selectedStatsSection .d-flex {
+            display: block !important;
+            justify-content: normal !important;
+            align-items: normal !important;
+        }
+
+        #selectedStatsSection .d-flex h6 {
+            margin-bottom: 0.125rem !important;
+        }
+
+        /* 确保段落元素没有额外间距 */
+        #quotaHintSection p,
+        #selectedStatsSection p {
+            margin-top: 0 !important;
+            margin-bottom: 0.125rem !important;
+        }
+
+        /* 医生列表容器紧凑样式 */
+        .doctor-list-container {
+            margin-top: 0.125rem !important;
+            margin-bottom: 0.125rem !important;
+            padding-top: 0.25rem !important;
+            padding-bottom: 0.25rem !important;
+            height: calc(2rem * 5) !important; /* 固定显示5行的高度 */
+            max-height: calc(2rem * 5) !important; /* 最大高度为5行 */
+            min-height: calc(2rem * 5) !important; /* 最小高度也为5行，确保即使只有一条数据也占5行高度 */
+            overflow-y: auto; /* 启用垂直滚动条 */
+        }
+
+        /* 配置区各部分之间的紧凑间距 */
+        #doctorListSection,
+        #quotaHintSection,
+        #selectedStatsSection {
+            margin-top: 0.5rem !important;
+            margin-bottom: 0.5rem !important;
+            padding-top: 0.25rem !important;
+            padding-bottom: 0.25rem !important;
+        }
+
+        /* 排班表单元格样式 */
+        .schedule-cell {
+            position: relative;
+            padding: 8px 4px !important;
+        }
+        
+        .time-slot {
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+        
+        .schedule-status {
+            font-size: 0.8rem;
+            color: #6c757d;
+        }
+        
+        /* 覆盖Bootstrap默认段落间距 */
+        #configPanel .mb-0 {
+            margin-bottom: 0 !important;
+        }
+
+        /* 配置区整体紧凑布局 */
+        #configPanel > .d-flex {
+            gap: 0.125rem !important;
+        }
+    </style>
+
+    <!-- 排班内容区域 -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <!-- 上部分：筛选区 -->
+                <div class="card-header">
+                    <h5 class="card-title mb-0"><i class="fas fa-filter me-2"></i>筛选条件</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex gap-3 mb-3">
+                        <div class="flex-grow-1">
+                            <select class="form-select" id="departmentSelect">
+                                <option value="">请选择科室</option>
+                                <!-- 科室选项将通过JavaScript动态加载 -->
+                            </select>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="dropdown">
+                                <button class="btn btn-outline-secondary dropdown-toggle w-100" type="button" id="weekSelectBtn" data-bs-toggle="dropdown" aria-expanded="false">
+                                    请选择周次
+                                </button>
+                                <div class="dropdown-menu p-3" style="min-width: 400px;">
+                                    <div class="week-navigation">
+                                        <div class="text-center mb-2">
+                                            <button class="btn btn-sm btn-outline-primary me-2" id="prevWeekBtn">上周</button>
+                                            <button class="btn btn-sm btn-primary me-2" id="currentWeekBtn">本周</button>
+                                            <button class="btn btn-sm btn-outline-primary" id="nextWeekBtn">下周</button>
+                                        </div>
+                                        <div class="month-selector">
+                                            <div class="text-center mb-2">
+                                                <select class="d-inline-block w-auto me-2" id="yearSelect">
+                                                    <!-- 年份选项将通过JavaScript动态加载 -->
+                                                </select>
+                                                年
+                                                <select class="d-inline-block w-auto mx-2" id="monthSelect">
+                                                    <option value="1">1月</option>
+                                                    <option value="2">2月</option>
+                                                    <option value="3">3月</option>
+                                                    <option value="4">4月</option>
+                                                    <option value="5">5月</option>
+                                                    <option value="6">6月</option>
+                                                    <option value="7">7月</option>
+                                                    <option value="8">8月</option>
+                                                    <option value="9">9月</option>
+                                                    <option value="10">10月</option>
+                                                    <option value="11">11月</option>
+                                                    <option value="12">12月</option>
+                                                </select>
+                                                月
+                                                <button class="btn btn-sm btn-outline-primary ms-2" id="jumpMonthBtn">跳转</button>
+                                            </div>
+                                            <div class="calendar-grid" id="calendarGrid">
+                                                <!-- 月历将通过JavaScript动态加载 -->
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1">
+                            <select class="form-select" id="exportBtn">
+                                <option value="">请选择导出排班表的类型</option>
+                                <option value="week">所选周次排班表</option>
+                                <option value="month">周次所在月份排班表</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 中间部分：排班操作区（周视图矩阵） -->
+                <div class="card-header mt-3">
+                    <h5 class="card-title mb-0"><i class="fas fa-calendar-week me-2"></i>周视图排班矩阵</h5>
+                </div>
+                <div class="card-body">
+                    <div class="week-schedule-matrix">
+                        <div class="d-flex">
+                            <!-- 左部分：核心排班操作区 -->
+                            <div class="schedule-table-container">
+                                <table class="table table-bordered text-center">
+                                    <thead>
+                                    <tr class="bg-light">
+                                        <th id="monthHeader"><span id="yearDisplay">年份</span><br><span id="monthDisplay">月份</span></th>
+                                        <th>周一<br><span id="date-mon">--</span></th>
+                                        <th>周二<br><span id="date-tue">--</span></th>
+                                        <th>周三<br><span id="date-wed">--</span></th>
+                                        <th>周四<br><span id="date-thu">--</span></th>
+                                        <th>周五<br><span id="date-fri">--</span></th>
+                                        <th>周六<br><span id="date-sat">--</span></th>
+                                        <th>周日<br><span id="date-sun">--</span></th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    <tr>
+                                        <td rowspan="2" class="align-middle time-period-cell" style="writing-mode: vertical-lr; text-orientation: mixed;">时间段</td>
+                                        <td class="schedule-cell" data-date="" data-time-slot="上午" title="已排医生数 / 剩余诊室数">
+                                            <div class="time-slot">上午</div>
+                                            <div class="schedule-status">--</div>
+                                        </td>
+                                        <td class="schedule-cell" data-date="" data-time-slot="上午" title="已排医生数 / 剩余诊室数">
+                                            <div class="time-slot">上午</div>
+                                            <div class="schedule-status">--</div>
+                                        </td>
+                                        <td class="schedule-cell" data-date="" data-time-slot="上午" title="已排医生数 / 剩余诊室数">
+                                            <div class="time-slot">上午</div>
+                                            <div class="schedule-status">--</div>
+                                        </td>
+                                        <td class="schedule-cell" data-date="" data-time-slot="上午" title="已排医生数 / 剩余诊室数">
+                                            <div class="time-slot">上午</div>
+                                            <div class="schedule-status">--</div>
+                                        </td>
+                                        <td class="schedule-cell" data-date="" data-time-slot="上午" title="已排医生数 / 剩余诊室数">
+                                            <div class="time-slot">上午</div>
+                                            <div class="schedule-status">--</div>
+                                        </td>
+                                        <td class="schedule-cell" data-date="" data-time-slot="上午" title="已排医生数 / 剩余诊室数">
+                                            <div class="time-slot">上午</div>
+                                            <div class="schedule-status">--</div>
+                                        </td>
+                                        <td class="schedule-cell" data-date="" data-time-slot="上午" title="已排医生数 / 剩余诊室数">
+                                            <div class="time-slot">上午</div>
+                                            <div class="schedule-status">--</div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="schedule-cell" data-date="" data-time-slot="下午" title="已排医生数 / 剩余诊室数">
+                                            <div class="time-slot">下午</div>
+                                            <div class="schedule-status">--</div>
+                                        </td>
+                                        <td class="schedule-cell" data-date="" data-time-slot="下午" title="已排医生数 / 剩余诊室数">
+                                            <div class="time-slot">下午</div>
+                                            <div class="schedule-status">--</div>
+                                        </td>
+                                        <td class="schedule-cell" data-date="" data-time-slot="下午" title="已排医生数 / 剩余诊室数">
+                                            <div class="time-slot">下午</div>
+                                            <div class="schedule-status">--</div>
+                                        </td>
+                                        <td class="schedule-cell" data-date="" data-time-slot="下午" title="已排医生数 / 剩余诊室数">
+                                            <div class="time-slot">下午</div>
+                                            <div class="schedule-status">--</div>
+                                        </td>
+                                        <td class="schedule-cell" data-date="" data-time-slot="下午" title="已排医生数 / 剩余诊室数">
+                                            <div class="time-slot">下午</div>
+                                            <div class="schedule-status">--</div>
+                                        </td>
+                                        <td class="schedule-cell" data-date="" data-time-slot="下午" title="已排医生数 / 剩余诊室数">
+                                            <div class="time-slot">下午</div>
+                                            <div class="schedule-status">--</div>
+                                        </td>
+                                        <td class="schedule-cell" data-date="" data-time-slot="下午" title="已排医生数 / 剩余诊室数">
+                                            <div class="time-slot">下午</div>
+                                            <div class="schedule-status">--</div>
+                                        </td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- 右部分：功能区 -->
+<!--                            <div class="function-panel">-->
+<!--                                &lt;!&ndash; 右侧配置区 - 初始隐藏 &ndash;&gt;-->
+<!--                                <div id="configPanel" style="display: none;">-->
+<!--                                    <h5 class="mb-3">配置区</h5>-->
+<!--                                    <div class="d-flex flex-column">-->
+<!--                                        <div id="doctorListSection">-->
+<!--                                            <h6>1. 医生列表</h6>-->
+<!--                                            <div class="doctor-list-container" id="doctorList">-->
+<!--                                                &lt;!&ndash; 医生列表将通过JavaScript动态加载 &ndash;&gt;-->
+<!--                                            </div>-->
+<!--                                        </div>-->
+
+<!--                                        <div id="quotaHintSection">-->
+<!--                                            <h6>2. 诊号/诊室提示</h6>-->
+<!--                                            <p>默认诊号：<span id="defaultQuota">20</span></p>-->
+<!--                                            <p>科室诊室数：<span id="roomCount">10</span></p>-->
+<!--                                        </div>-->
+
+<!--                                        <div id="selectedStatsSection">-->
+<!--                                            <div class="d-flex justify-content-between align-items-center">-->
+<!--                                                <h6>3. 已选医生统计</h6>-->
+<!--                                                &lt;!&ndash; 刷新按钮已移除 &ndash;&gt;-->
+<!--                                            </div>-->
+<!--                                            <p>已选：<span id="selectedCount">0</span>人</p>-->
+<!--                                        </div>-->
+
+<!--                                        <div class="text-center">-->
+<!--                                            <button class="btn btn-primary" id="saveScheduleBtn">保存排班</button>-->
+<!--                                            <button class="btn btn-secondary" id="returnBtn" style="margin-left: 10px;">返回</button>-->
+<!--                                        </div>-->
+<!--                                    </div>-->
+<!--                                </div>-->
+<!--                            </div>-->
+                            <!-- 修改配置区HTML结构 -->
+                            <div class="function-panel">
+                                <!-- 右侧配置区 - 初始隐藏 -->
+                                <div id="configPanel" style="display: none;">
+                                    <h5 class="mb-2">配置区</h5>
+                                    <div class="d-flex flex-column" style="gap: 0.125rem;">
+                                        <div id="doctorListSection">
+                                            <h6 class="mb-0">1. 医生列表</h6>
+                                            <div class="doctor-list-container" id="doctorList">
+                                                <!-- 医生列表将通过JavaScript动态加载 -->
+                                            </div>
+                                        </div>
+
+                                        <div id="quotaHintSection">
+                                            <h6 class="mb-0">2. 诊号/诊室提示</h6>
+                                            <p class="mb-0" style="font-size: 0.9rem;">默认诊号：<span id="defaultQuota">20</span></p>
+                                            <p class="mb-0" style="font-size: 0.9rem;">科室可用诊室数：<span id="roomCount">0</span></p>
+                                        </div>
+
+                                        <div id="selectedStatsSection">
+                                            <h6 class="mb-0">3. 已选医生统计</h6>
+                                            <p class="mb-0" style="font-size: 0.9rem;">已选：<span id="selectedCount">0</span>人</p>
+                                        </div>
+
+                                        <div class="text-center mt-2">
+                                            <button class="btn btn-primary" id="saveScheduleBtn">保存排班</button>
+                                            <button class="btn btn-secondary" id="returnBtn" style="margin-left: 10px;">返回</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 下部分：操作按钮区 -->
+                <div class="card-header mt-3">
+                    <h5 class="card-title mb-0"><i class="fas fa-tools me-2"></i>操作区域</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex flex-wrap gap-2">
+                        <button class="btn btn-warning" id="resetWeekBtn">
+                            <i class="fas fa-undo me-1"></i>重置所选周
+                        </button>
+                        <button class="btn btn-info" id="copyPrevWeekBtn">
+                            <i class="fas fa-copy me-1"></i>复制上周排班
+                        </button>
+                        <button class="btn btn-secondary" id="refreshPageBtn">
+                            <i class="fas fa-sync-alt me-1"></i>刷新
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- JavaScript for dynamic functionality -->
+    <script>
+        // 定义全局变量
+        window.currentDepartmentId = null;
+        window.currentWeekStart = null;
+        window.currentWeekEnd = null;
+        window.currentSelectedCell = null;
+        window.thisWeekStart = null; // 本周的起始日期
+        window.selectedDate = null; // 选中的日期
+
+        // 确保所有函数都在全局作用域
+        window.loadDepartments = function () {
+            console.log('开始加载科室列表...');
+            fetch('/schedule/departments')
+                .then(response => {
+                    console.log('科室API响应状态:', response.status, response.statusText);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(departments => {
+                    console.log('获取到的科室数据:', departments);
+                    const deptSelect = document.getElementById('departmentSelect');
+                    // 清空现有选项，但保留第一个默认选项
+                    const firstOption = deptSelect.options[0];
+                    deptSelect.innerHTML = '';
+                    deptSelect.appendChild(firstOption);
+
+                    if (departments && departments.length > 0) {
+                        departments.forEach(dept => {
+                            const option = document.createElement('option');
+                            option.value = dept.id;
+                            option.textContent = dept.name;
+                            deptSelect.appendChild(option);
+                        });
+
+                        // 设置默认选择第一个科室
+                        if (departments.length > 0) {
+                            window.currentDepartmentId = departments[0].id;
+                            deptSelect.value = departments[0].id;
+                            console.log('设置默认科室ID:', departments[0].id, '名称:', departments[0].name);
+
+                            // 触发change事件以确保更新相关UI
+                            const changeEvent = new Event('change');
+                            deptSelect.dispatchEvent(changeEvent);
+                        }
+                    } else {
+                        // 如果没有科室，添加提示信息
+                        const option = document.createElement('option');
+                        option.value = '';
+                        option.textContent = '暂无科室数据';
+                        deptSelect.appendChild(option);
+                        option.disabled = true;
+                    }
+                })
+                .catch(error => {
+                    console.error('加载科室列表失败:', error);
+                    const deptSelect = document.getElementById('departmentSelect');
+                    const firstOption = deptSelect.options[0];
+                    deptSelect.innerHTML = '';
+                    deptSelect.appendChild(firstOption);
+
+                    const errorOption = document.createElement('option');
+                    errorOption.value = '';
+                    errorOption.textContent = '加载失败，请刷新页面重试';
+                    errorOption.disabled = true;
+                    deptSelect.appendChild(errorOption);
+                });
+        };
+
+
+        window.loadYears = function () {
+            const yearSelect = document.getElementById('yearSelect');
+            const currentYear = new Date().getFullYear();
+
+            // 清空现有选项
+            yearSelect.innerHTML = '';
+
+            for (let i = currentYear - 10; i <= currentYear + 10; i++) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = i;
+                if (i === currentYear) {
+                    option.selected = true;
+                }
+                yearSelect.appendChild(option);
+            }
+        };
+
+        window.generateCalendar = function () {
+            const calendarGrid = document.getElementById('calendarGrid');
+            const year = parseInt(document.getElementById('yearSelect').value);
+            const month = parseInt(document.getElementById('monthSelect').value);
+
+            // 清空现有内容
+            calendarGrid.innerHTML = '';
+
+            // 添加星期标题
+            const weekdays = ['一', '二', '三', '四', '五', '六', '日'];
+            weekdays.forEach(day => {
+                const dayElement = document.createElement('div');
+                dayElement.className = 'calendar-day fw-bold';
+                dayElement.textContent = day;
+                calendarGrid.appendChild(dayElement);
+            });
+
+            // 获取当月第一天和最后一天
+            const firstDay = new Date(year, month - 1, 1);
+            const lastDay = new Date(year, month, 0);
+            const startDate = new Date(firstDay.getFullYear(), firstDay.getMonth(), firstDay.getDate());
+            // 调整到当周周一
+            const dayOfWeek = firstDay.getDay();
+            const adjustedDay = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // 如果是周日(0)，则调整为-6天回到周一
+            startDate.setDate(startDate.getDate() + adjustedDay);
+
+            // 生成日历天数
+            const today = new Date();
+            let currentDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+
+            for (let i = 0; i < 42; i++) { // 最多6行7列
+                const dayElement = document.createElement('div');
+                dayElement.className = 'calendar-day';
+                dayElement.textContent = currentDate.getDate();
+
+                // 检查是否是今天
+                if (currentDate.toDateString() === today.toDateString()) {
+                    dayElement.classList.add('today');
+                }
+
+                // 检查是否是当前月份
+                if (currentDate.getMonth() + 1 === month) {
+                    dayElement.classList.add('current-month');
+                } else {
+                    dayElement.classList.add('other-month');
+                    dayElement.style.color = '#ccc';
+                }
+
+                // 保存当前日期的副本，避免闭包问题
+                const dateCopy = new Date(currentDate);
+                
+                dayElement.addEventListener('click', function (e) {
+                    // 阻止事件冒泡，防止下拉菜单关闭
+                    e.stopPropagation();
+                    
+                    // 检查是否是当前月份的日期
+                    if (dateCopy.getMonth() + 1 !== month) {
+                        // 如果不是当前月份的日期，不执行选择操作
+                        return;
+                    }
+                    
+                    // 移除之前选中的日期样式
+                    document.querySelectorAll('.calendar-day.selected').forEach(day => {
+                        day.classList.remove('selected');
+                    });
+                    
+                    // 添加选中样式到当前日期
+                    this.classList.add('selected');
+                    
+                    // 保存选中的日期
+                    window.selectedDate = dateCopy;
+                });
+
+                calendarGrid.appendChild(dayElement);
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+        };
+
+        window.selectWeekForDate = function (date) {
+            // 计算该日期所在周的周一
+            // 使用年、月、日构造新日期以避免时区问题
+            const weekStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+            const dayOfWeek = weekStart.getDay();
+            const diffToMonday = weekStart.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+            weekStart.setDate(diffToMonday);
+
+            window.currentWeekStart = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate());
+            window.currentWeekEnd = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + 6);
+
+            // 更新周次选择按钮文本
+            document.getElementById('weekSelectBtn').textContent =
+                `${weekStart.getFullYear()}年${weekStart.getMonth() + 1}月${weekStart.getDate()}日-${window.currentWeekEnd.getDate()}日`;
+
+            // 更新月份标题，同时显示年份和月份
+            document.getElementById('yearDisplay').textContent = `${weekStart.getFullYear()}年`;
+            document.getElementById('monthDisplay').textContent = `${weekStart.getMonth() + 1}月`;
+            
+            // 更新表头日期
+            updateWeekDates(window.currentWeekStart);
+            
+            // 更新单元格样式
+            updateScheduleCells(window.currentWeekStart);
+            
+            // 预加载新周的排班数据
+            setTimeout(() => {
+                window.preloadScheduleData();
+                setTimeout(() => {
+                    window.updateCellHoverEvents();
+                }, 100);
+            }, 100);
+        };
+
+        window.initializeCurrentWeek = function () {
+            const today = new Date();
+            const dayOfWeek = today.getDay();
+            const diffToMonday = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+            const monday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+            monday.setDate(diffToMonday);
+        
+            // 设置本周起始日期
+            window.thisWeekStart = new Date(monday);
+                    
+            window.currentWeekStart = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate());
+            window.currentWeekEnd = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6);
+        
+            // 更新周次选择按钮文本
+            document.getElementById('weekSelectBtn').textContent =
+                `${window.currentWeekStart.getFullYear()}年${window.currentWeekStart.getMonth() + 1}月${window.currentWeekStart.getDate()}日-${window.currentWeekEnd.getDate()}日`;
+        
+            // 更新年份和月份标题
+            document.getElementById('yearDisplay').textContent = `${window.currentWeekStart.getFullYear()}年`;
+            document.getElementById('monthDisplay').textContent = `${window.currentWeekStart.getMonth() + 1}月`;
+                    
+            // 更新表头日期
+            updateWeekDates(window.currentWeekStart);
+                    
+            // 更新单元格样式
+            updateScheduleCells(window.currentWeekStart);
+                    
+            // 预加载新周的排班数据
+            setTimeout(() => {
+                window.preloadScheduleData();
+                setTimeout(() => {
+                    window.updateCellHoverEvents();
+                }, 100);
+            }, 100);
+        };
+        
+        // 更新周表头日期
+        function updateWeekDates(startDate) {
+            const days = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+            
+            for (let i = 0; i < 7; i++) {
+                const date = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate() + i);
+                
+                const dayElement = document.getElementById(`date-${days[i]}`);
+                if (dayElement) {
+                    dayElement.textContent = `${date.getDate()}日`;
+                }
+            }
+            
+            // 更新周矩阵单元格的日期和样式
+            updateScheduleCells(startDate);
+        }
+        
+        // 更新周矩阵单元格的日期和样式
+        function updateScheduleCells(startDate) {
+            const currentTime = new Date();
+            
+            // 获取所有上午和下午的单元格
+            const morningCells = document.querySelectorAll('.schedule-cell[data-time-slot="上午"]');
+            const afternoonCells = document.querySelectorAll('.schedule-cell[data-time-slot="下午"]');
+            
+            for (let i = 0; i < 7; i++) {
+                const date = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate() + i);
+                
+                // 格式化日期为字符串
+                const dateStr = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
+                
+                // 更新上午单元格
+                if (morningCells[i]) {
+                    morningCells[i].dataset.date = dateStr;
+                    // 检查是否是过去日期或今天上午超过12点
+                    if (isPastDate(date, '上午', currentTime)) {
+                        morningCells[i].classList.add('past');
+                        morningCells[i].style.backgroundColor = '#e9ecef';
+                        morningCells[i].style.color = '#6c757d';
+                    } else {
+                        morningCells[i].classList.remove('past');
+                        morningCells[i].style.backgroundColor = '';
+                        morningCells[i].style.color = '';
+                    }
+                }
+                
+                // 更新下午单元格
+                if (afternoonCells[i]) {
+                    afternoonCells[i].dataset.date = dateStr;
+                    // 检查是否是过去日期
+                    if (isPastDate(date, '下午', currentTime)) {
+                        afternoonCells[i].classList.add('past');
+                        afternoonCells[i].style.backgroundColor = '#e9ecef';
+                        afternoonCells[i].style.color = '#6c757d';
+                    } else {
+                        afternoonCells[i].classList.remove('past');
+                        afternoonCells[i].style.backgroundColor = '';
+                        afternoonCells[i].style.color = '';
+                    }
+                }
+            }
+        }
+        
+        // 检查日期是否为过去日期
+        function isPastDate(date, timeSlot, currentTime) {
+            // 比较日期部分
+            const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+            const currentOnly = new Date(currentTime.getFullYear(), currentTime.getMonth(), currentTime.getDate());
+            
+            // 如果是过去的日期，则为过去时间
+            if (dateOnly < currentOnly) {
+                return true;
+            }
+            
+            // 如果是今天，检查时间段
+            if (dateOnly.getTime() === currentOnly.getTime()) {
+                // 如果是上午且当前时间超过12点，则上午为过去时间
+                if (timeSlot === '上午' && currentTime.getHours() >= 12) {
+                    return true;
+                }
+            }
+            
+            return false;
+        }
+
+        // 绑定事件
+        window.bindEvents = function () {
+            // 科室选择改变事件
+            document.getElementById('departmentSelect').addEventListener('change', function () {
+                window.updateSelectedDepartment(this.value);
+            });
+
+            // 周次选择按钮事件
+            document.getElementById('prevWeekBtn').addEventListener('click', function () {
+                // 跳转到本周对应的上周
+                if (!window.thisWeekStart) {
+                    const today = new Date();
+                    const dayOfWeek = today.getDay();
+                    const diffToMonday = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+                    const monday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                    monday.setDate(diffToMonday);
+                    window.thisWeekStart = new Date(monday);
+                }
+                
+                // 计算本周的上周
+                window.currentWeekStart = new Date(window.thisWeekStart.getFullYear(), window.thisWeekStart.getMonth(), window.thisWeekStart.getDate() - 7);
+                window.currentWeekEnd = new Date(window.currentWeekStart.getFullYear(), window.currentWeekStart.getMonth(), window.currentWeekStart.getDate() + 6);
+
+                document.getElementById('weekSelectBtn').textContent =
+                    `${window.currentWeekStart.getFullYear()}年${window.currentWeekStart.getMonth() + 1}月${window.currentWeekStart.getDate()}日-${window.currentWeekEnd.getDate()}日`;
+
+                document.getElementById('yearDisplay').textContent = `${window.currentWeekStart.getFullYear()}年`;
+                document.getElementById('monthDisplay').textContent = `${window.currentWeekStart.getMonth() + 1}月`;
+                
+                // 更新表头日期
+                updateWeekDates(window.currentWeekStart);
+                
+                // 更新单元格样式
+                updateScheduleCells(window.currentWeekStart);
+                
+                // 预加载新周的排班数据
+                setTimeout(() => {
+                    window.preloadScheduleData();
+                    setTimeout(() => {
+                        window.updateCellHoverEvents();
+                    }, 100);
+                }, 100);
+
+                // 隐藏下拉菜单
+                const dropdownMenu = document.querySelector('.dropdown-menu.show');
+                if (dropdownMenu) dropdownMenu.classList.remove('show');
+            });
+
+            document.getElementById('currentWeekBtn').addEventListener('click', function () {
+                // 跳转到本周
+                const today = new Date();
+                const dayOfWeek = today.getDay();
+                const diffToMonday = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+                const monday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                monday.setDate(diffToMonday);
+
+                // 设置本周起始日期
+                window.thisWeekStart = new Date(monday);
+                
+                window.currentWeekStart = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate());
+                window.currentWeekEnd = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6);
+
+                // 更新周次选择按钮文本
+                document.getElementById('weekSelectBtn').textContent =
+                    `${window.currentWeekStart.getFullYear()}年${window.currentWeekStart.getMonth() + 1}月${window.currentWeekStart.getDate()}日-${window.currentWeekEnd.getDate()}日`;
+
+                // 更新年份和月份标题
+                document.getElementById('yearDisplay').textContent = `${window.currentWeekStart.getFullYear()}年`;
+                document.getElementById('monthDisplay').textContent = `${window.currentWeekStart.getMonth() + 1}月`;
+                
+                // 更新表头日期
+                updateWeekDates(window.currentWeekStart);
+                
+                // 更新单元格样式
+                updateScheduleCells(window.currentWeekStart);
+                
+                // 预加载新周的排班数据
+                setTimeout(() => {
+                    window.preloadScheduleData();
+                    setTimeout(() => {
+                        window.updateCellHoverEvents();
+                    }, 100);
+                }, 100);
+
+                // 隐藏下拉菜单
+                const dropdownMenu = document.querySelector('.dropdown-menu.show');
+                if (dropdownMenu) dropdownMenu.classList.remove('show');
+            });
+
+            document.getElementById('nextWeekBtn').addEventListener('click', function () {
+                // 跳转到本周对应的下周
+                if (!window.thisWeekStart) {
+                    const today = new Date();
+                    const dayOfWeek = today.getDay();
+                    const diffToMonday = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+                    const monday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                    monday.setDate(diffToMonday);
+                    window.thisWeekStart = new Date(monday);
+                }
+                
+                // 计算本周的下周
+                window.currentWeekStart = new Date(window.thisWeekStart.getFullYear(), window.thisWeekStart.getMonth(), window.thisWeekStart.getDate() + 7);
+                window.currentWeekEnd = new Date(window.currentWeekStart.getFullYear(), window.currentWeekStart.getMonth(), window.currentWeekStart.getDate() + 6);
+
+                document.getElementById('weekSelectBtn').textContent =
+                    `${window.currentWeekStart.getFullYear()}年${window.currentWeekStart.getMonth() + 1}月${window.currentWeekStart.getDate()}日-${window.currentWeekEnd.getDate()}日`;
+
+                document.getElementById('yearDisplay').textContent = `${window.currentWeekStart.getFullYear()}年`;
+                document.getElementById('monthDisplay').textContent = `${window.currentWeekStart.getMonth() + 1}月`;
+                
+                // 更新表头日期
+                updateWeekDates(window.currentWeekStart);
+                
+                // 更新单元格样式
+                updateScheduleCells(window.currentWeekStart);
+                
+                // 预加载新周的排班数据
+                setTimeout(() => {
+                    window.preloadScheduleData();
+                    setTimeout(() => {
+                        window.updateCellHoverEvents();
+                    }, 100);
+                }, 100);
+
+                // 隐藏下拉菜单
+                const dropdownMenu = document.querySelector('.dropdown-menu.show');
+                if (dropdownMenu) dropdownMenu.classList.remove('show');
+            });
+
+            // 月份跳转按钮事件
+            document.getElementById('jumpMonthBtn').addEventListener('click', function () {
+                // 如果有选中的日期，则跳转到该日期所在的周
+                if (window.selectedDate) {
+                    selectWeekForDate(window.selectedDate);
+                    
+                    // 隐藏下拉菜单
+                    const dropdownMenu = document.querySelector('.dropdown-menu.show');
+                    if (dropdownMenu) {
+                        dropdownMenu.classList.remove('show');
+                    }
+                } else {
+                    // 如果没有选中日期，则生成当前月历
+                    generateCalendar();
+                }
+            });
+
+            // 年月选择改变事件
+            document.getElementById('yearSelect').addEventListener('change', function() {
+                // 只更新月历，不跳转
+                generateCalendar();
+            });
+            document.getElementById('monthSelect').addEventListener('change', function() {
+                // 只更新月历，不跳转
+                generateCalendar();
+            });
+
+            // 使用MutationObserver监听dropdown菜单的show/hide类变化
+            const weekSelectBtn = document.getElementById('weekSelectBtn');
+            const weekSelectDropdown = weekSelectBtn.parentNode;
+
+            // 创建观察器实例
+            const observer = new MutationObserver(function (mutations) {
+                mutations.forEach(function (mutation) {
+                    if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                        const dropdownMenu = weekSelectDropdown.querySelector('.dropdown-menu');
+                        if (dropdownMenu && dropdownMenu.classList.contains('show')) {
+                            weekSelectBtn.classList.add('show');
+                        } else {
+                            weekSelectBtn.classList.remove('show');
+                        }
+                    }
+                });
+            });
+
+            // 开始观察
+            observer.observe(weekSelectDropdown, {
+                attributes: true,
+                attributeFilter: ['class']
+            });
+
+            // 同时也监听dropdown-menu的类变化
+            const dropdownMenu = weekSelectDropdown.querySelector('.dropdown-menu');
+            if (dropdownMenu) {
+                const menuObserver = new MutationObserver(function (mutations) {
+                    mutations.forEach(function (mutation) {
+                        if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                            if (mutation.target.classList.contains('show')) {
+                                weekSelectBtn.classList.add('show');
+                            } else {
+                                weekSelectBtn.classList.remove('show');
+                            }
+                        }
+                    });
+                });
+
+                menuObserver.observe(dropdownMenu, {
+                    attributes: true,
+                    attributeFilter: ['class']
+                });
+            }
+
+            // 导出下拉选择事件
+            document.getElementById('exportBtn').addEventListener('change', function () {
+                const exportType = this.value;
+                if (!window.currentDepartmentId) {
+                    alert('请先选择科室');
+                    this.value = '';
+                    return;
+                }
+
+                if (exportType === 'week' || exportType === 'month') {
+                    exportSchedule(exportType);
+                    // 重置选择
+                    this.value = '';
+                }
+            });
+
+            // 排班单元格点击事件
+            document.querySelectorAll('.schedule-cell').forEach(cell => {
+                cell.addEventListener('click', function () {
+                    // 检查是否为过去的时间
+                    if (this.classList.contains('past')) {
+                        // 显示查看完成按钮，隐藏返回按钮，禁用其他功能
+                        document.getElementById('saveScheduleBtn').textContent = '查看完成';
+                        document.getElementById('returnBtn').style.display = 'none';
+                        document.querySelectorAll('#doctorList input[type="checkbox"]').forEach(checkbox => {
+                            checkbox.disabled = true;
+                        });
+                        document.querySelectorAll('.quota-input').forEach(input => {
+                            input.disabled = true;
+                        });
+                    } else {
+                        // 恢复保存排班按钮，显示返回按钮
+                        document.getElementById('saveScheduleBtn').textContent = '保存排班';
+                        document.getElementById('returnBtn').style.display = 'inline-block';
+                        document.querySelectorAll('#doctorList input[type="checkbox"]').forEach(checkbox => {
+                            checkbox.disabled = false;
+                        });
+                        document.querySelectorAll('.quota-input').forEach(input => {
+                            input.disabled = false;
+                        });
+                    }
+
+                    // 高亮选中的单元格
+                    document.querySelectorAll('.schedule-cell').forEach(c => {
+                        c.classList.remove('selected');
+                    });
+                    this.classList.add('selected');
+
+                    // 设置当前选中的单元格
+                    window.currentSelectedCell = this;
+
+                    // 显示配置区
+                    document.getElementById('configPanel').style.display = 'block';
+
+                    // 加载该时段的医生列表
+                    loadDoctorList(this.dataset.date, this.dataset.timeSlot);
+                });
+            });
+
+            // 保存排班按钮事件
+            document.getElementById('saveScheduleBtn').addEventListener('click', function () {
+                if (this.textContent === '查看完成') {
+                    // 恢复配置区
+                    document.getElementById('configPanel').style.display = 'none';
+                    document.querySelectorAll('.schedule-cell').forEach(c => {
+                        c.classList.remove('selected');
+                    });
+                    window.currentSelectedCell = null;
+                    
+                    // 恢复按钮文本和显示状态
+                    this.textContent = '保存排班';
+                    document.getElementById('returnBtn').style.display = 'inline-block';
+                } else {
+                    saveSchedule();
+                }
+            });
+            
+            // 返回按钮事件
+            document.getElementById('returnBtn').addEventListener('click', function () {
+                // 配置区恢复为默认的空白
+                document.getElementById('configPanel').style.display = 'none';
+                
+                // 取消周矩阵的单元格高亮
+                document.querySelectorAll('.schedule-cell').forEach(c => {
+                    c.classList.remove('selected');
+                });
+                
+                // 重置当前选中的单元格
+                window.currentSelectedCell = null;
+            });
+
+            // 重置所选周按钮事件
+            document.getElementById('resetWeekBtn').addEventListener('click', function () {
+                resetWeek();
+            });
+
+            document.getElementById('copyPrevWeekBtn').addEventListener('click', function () {
+                copyPreviousWeek();
+            });
+
+            document.getElementById('refreshPageBtn').addEventListener('click', function () {
+                location.reload();
+            });
+            
+            // 页面加载完成后，自动显示本周的日期
+            initializeCurrentWeek();
+                    
+            // 定义初始化函数，供dashboard.html调用
+            window.initSchedulePage = function() {
+                console.log('执行排班页面初始化');
+                // 重新加载科室列表
+                window.loadDepartments();
+                // 初始化当前周
+                window.initializeCurrentWeek();
+                // 绑定事件
+                window.bindEvents();
+            };
+        };
+
+        // 加载医生列表
+        window.loadDoctorList = function (date, timeSlot) {
+            if (!window.currentDepartmentId) {
+                alert('请先选择科室');
+                return;
+            }
+
+            fetch(`/schedule/doctors/${window.currentDepartmentId}`)
+                .then(response => response.json())
+                .then(doctors => {
+                    console.log('获取到的医生数据:', doctors); // 添加调试信息
+                    const doctorListContainer = document.getElementById('doctorList');
+                    doctorListContainer.innerHTML = '';
+
+                    if (!doctors || doctors.length === 0) {
+                        console.log('没有找到该科室的医生');
+                        const noDoctorsDiv = document.createElement('div');
+                        noDoctorsDiv.className = 'mb-2';
+                        noDoctorsDiv.innerHTML = '<p style="color: #6c757d; font-style: italic;">该科室暂无医生</p>';
+                        doctorListContainer.appendChild(noDoctorsDiv);
+                        return;
+                    }
+
+                    doctors.forEach(doctor => {
+                        const div = document.createElement('div');
+                        div.className = 'mb-2';
+
+                        const checkbox = document.createElement('input');
+                        checkbox.type = 'checkbox';
+                        checkbox.id = `doctor-${doctor.id}`;
+                        checkbox.value = doctor.id;
+                        checkbox.dataset.employeeId = doctor.employeeId;
+                        checkbox.dataset.doctorName = doctor.realName;
+                        
+                        // 检查当前选中的单元格是否是过去时间，如果是则禁用复选框
+                        if (window.currentSelectedCell && window.currentSelectedCell.classList.contains('past')) {
+                            checkbox.disabled = true;
+                        }
+
+                        checkbox.addEventListener('change', function () {
+                            // 检查当前选中的单元格是否是过去时间，如果是则阻止更改
+                            if (window.currentSelectedCell && window.currentSelectedCell.classList.contains('past')) {
+                                // 恢复原来的选中状态
+                                this.checked = !this.checked;
+                                return;
+                            }
+                            
+                            // 当复选框状态改变时，更新输入框的可用性
+                            const input = this.nextElementSibling.querySelector('.quota-input');
+                            if (this.checked) {
+                                // 勾选后，输入框自动填充"20"
+                                input.disabled = false;
+                                input.value = '20';
+                            } else {
+                                // 如果医生姓名前面的多选框没有被选中，则输入框中不需要自动填充内容，并且不允许在输入框中输入
+                                input.disabled = true;
+                                input.value = '';
+                            }
+                            updateSelectedCount();
+                        });
+
+                        const label = document.createElement('label');
+                        label.htmlFor = `doctor-${doctor.id}`;
+                        label.style.display = 'flex';
+                        label.style.alignItems = 'center';
+                        label.style.justifyContent = 'space-between';
+                        
+                        // 创建医生姓名文本和诊号输入区域
+                        const nameAndQuotaSpan = document.createElement('span');
+                        nameAndQuotaSpan.innerHTML = `${doctor.realName} (诊号：<input type="number" class="quota-input" placeholder="0" min="0" value="" disabled> 个)`;
+                        
+                        // 检查当前选中的单元格是否是过去时间，如果是则禁用输入框
+                        const input = nameAndQuotaSpan.querySelector('.quota-input');
+                        if (window.currentSelectedCell && window.currentSelectedCell.classList.contains('past')) {
+                            input.disabled = true;
+                        }
+                        
+                        label.appendChild(checkbox);
+                        label.appendChild(nameAndQuotaSpan);
+                        
+                        div.appendChild(label);
+                        doctorListContainer.appendChild(div);
+                    });
+
+                    // 获取已保存的排班信息并设置复选框状态
+                    if (date && timeSlot) {
+                        fetch(`/schedule/schedules?startDate=${date}&endDate=${date}&departmentId=${window.currentDepartmentId}`)
+                            .then(response => response.json())
+                            .then(schedules => {
+                                schedules.forEach(schedule => {
+                                    if (schedule.timeSlot === timeSlot) {
+                                        // 找到对应的复选框并勾选
+                                        const checkbox = document.querySelector(`input[data-doctor-name="${schedule.doctorName}"]`);
+                                        if (checkbox) {
+                                            checkbox.checked = true;
+                                            const input = checkbox.nextElementSibling.querySelector('.quota-input');
+                                            if (input) {
+                                                input.value = schedule.registrationQuota;
+                                                // 检查当前选中的单元格是否是过去时间
+                                                if (window.currentSelectedCell && window.currentSelectedCell.classList.contains('past')) {
+                                                    // 如果是过去时间，禁用输入框和复选框
+                                                    input.disabled = true;
+                                                    checkbox.disabled = true;
+                                                } else {
+                                                    input.disabled = false;
+                                                }
+                                            }
+                                        }
+                                    }
+                                });
+
+                                // 检查当前选中的单元格是否是过去时间，如果是则禁用所有复选框
+                                if (window.currentSelectedCell && window.currentSelectedCell.classList.contains('past')) {
+                                    document.querySelectorAll('#doctorList input[type="checkbox"]').forEach(checkbox => {
+                                        checkbox.disabled = true;
+                                    });
+                                    document.querySelectorAll('.quota-input').forEach(input => {
+                                        input.disabled = true;
+                                    });
+                                }
+
+                                // 更新已选统计
+                                updateSelectedCount();
+                            });
+                    }
+                })
+                .catch(error => {
+                    console.error('加载医生列表失败:', error);
+                    console.error('错误详情:', error);
+                });
+        };
+
+        // 更新已选统计
+        window.updateSelectedCount = function () {
+            const checkboxes = document.querySelectorAll('#doctorList input[type="checkbox"]:checked');
+            document.getElementById('selectedCount').textContent = checkboxes.length;
+        };
+
+        // 获取科室可用诊室数量
+        window.getAvailableRoomCount = function (departmentId) {
+            // 从后端获取科室可用诊室数量
+            fetch(`/schedule/available-rooms?departmentId=${departmentId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('roomCount').textContent = data.count;
+                    } else {
+                        console.error('获取科室可用诊室数量失败:', data.message);
+                        document.getElementById('roomCount').textContent = '0';
+                    }
+                })
+                .catch(error => {
+                    console.error('获取科室可用诊室数量失败:', error);
+                    document.getElementById('roomCount').textContent = '0';
+                });
+        };
+        
+        // 检查是否已超过科室诊室数限制
+        window.checkLimit = function () {
+            const selectedCount = document.querySelectorAll('#doctorList input[type="checkbox"]:checked').length;
+            const roomCount = parseInt(document.getElementById('roomCount').textContent);
+
+            if (selectedCount > roomCount) {
+                alert(`所选医生数量（${selectedCount}人）已超过科室可用诊室数（${roomCount}个）上限！`);
+                return false;
+            }
+            return true;
+        };
+        
+        // 更新选中的科室
+        window.updateSelectedDepartment = function (departmentId) {
+            window.currentDepartmentId = departmentId;
+            
+            // 更新科室可用诊室数量
+            if (departmentId) {
+                window.getAvailableRoomCount(departmentId);
+            }
+            
+            if (window.currentSelectedCell) {
+                // 如果当前已选中单元格，重新加载医生列表
+                loadDoctorList(window.currentSelectedCell.dataset.date, window.currentSelectedCell.dataset.timeSlot);
+            }
+        };
+
+        // 保存排班
+        window.saveSchedule = function () {
+            // 防止重复提交
+            const saveBtn = document.getElementById('saveScheduleBtn');
+            if (saveBtn.disabled === true) {
+                return; // 如果按钮已禁用，说明正在提交中，直接返回
+            }
+            
+            if (!window.currentSelectedCell) {
+                alert('请先选择一个排班单元格');
+                return;
+            }
+
+            if (!window.currentDepartmentId) {
+                alert('请先选择科室');
+                return;
+            }
+
+            if (!window.checkLimit()) {
+                return;
+            }
+
+            // 收集选中的医生信息
+            const selectedDoctors = [];
+            document.querySelectorAll('#doctorList input[type="checkbox"]:checked').forEach(checkbox => {
+                const input = checkbox.nextElementSibling.querySelector('.quota-input');
+                if (input && input.value !== '') {
+                    selectedDoctors.push({
+                        doctorName: checkbox.dataset.doctorName,
+                        employeeId: checkbox.dataset.employeeId,
+                        registrationQuota: parseInt(input.value)
+                    });
+                }
+            });
+            
+            // 禁用保存按钮，防止重复提交
+            saveBtn.disabled = true;
+            saveBtn.textContent = '保存中...';
+
+            // 发送请求保存排班
+            fetch('/schedule/schedules', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    scheduleDate: window.currentSelectedCell.dataset.date,
+                    timeSlot: window.currentSelectedCell.dataset.timeSlot,
+                    departmentId: window.currentDepartmentId,
+                    doctors: selectedDoctors
+                })
+            })
+                .then(response => response.text())
+                .then(result => {
+                    if (result === 'success') {
+                        alert('排班保存成功！');
+                        // 保存成功后，可以考虑更新当前视图以反映更改
+                        // 但要避免触发不必要的预加载
+                    } else {
+                        alert('保存失败：' + result);
+                    }
+                })
+                .catch(error => {
+                    console.error('保存排班失败:', error);
+                    alert('保存失败：' + error.message);
+                })
+                .finally(() => {
+                    // 无论成功或失败，都重新启用按钮
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = '保存排班';
+                });
+        };
+
+        // 重置所选周
+        window.resetWeek = function () {
+            if (!window.currentDepartmentId) {
+                alert('请先选择科室');
+                return;
+            }
+
+            if (!window.currentWeekStart || !window.currentWeekEnd) {
+                alert('请先选择周次');
+                return;
+            }
+
+            // 检查是否为过去或当前周
+            const today = new Date();
+            if (today >= window.currentWeekStart && today <= window.currentWeekEnd) {
+                alert('当前时间处于所选周内，不支持批量重置排班！');
+                return;
+            }
+
+            if (today > window.currentWeekEnd) {
+                alert('所选周时间已过，无法重置所选周排班！');
+                return;
+            }
+
+            // 确认重置
+            if (confirm('确定要重置所选周的排班吗？此操作不可恢复。')) {
+                // 首先执行原有的重置操作
+                fetch('/schedule/reset-week', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        startDate: window.currentWeekStart.toISOString().split('T')[0],
+                        endDate: window.currentWeekEnd.toISOString().split('T')[0],
+                        departmentId: window.currentDepartmentId
+                    })
+                })
+                    .then(response => response.text())
+                    .then(result => {
+                        if (result === 'success') {
+                            // 执行额外的清理room_busy表的操作
+                            // 创建一个数组包含周一到周日的所有日期
+                            const weekDates = [];
+                            let currentDate = new Date(window.currentWeekStart);
+                            for (let i = 0; i < 7; i++) {
+                                weekDates.push(`${currentDate.getFullYear()}-${(currentDate.getMonth() + 1).toString().padStart(2, '0')}-${currentDate.getDate().toString().padStart(2, '0')}`);
+                                currentDate.setDate(currentDate.getDate() + 1);
+                            }
+                            
+                            // 对每一天都执行清理操作
+                            const cleanupPromises = weekDates.map(date => {
+                                return fetch('/schedule/clear-room-busy', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json'
+                                    },
+                                    body: JSON.stringify({
+                                        scheduleDate: date,
+                                        departmentId: window.currentDepartmentId
+                                    })
+                                });
+                            });
+                            
+                            // 等待所有清理操作完成
+                            Promise.all(cleanupPromises)
+                                .then(responses => {
+                                    return Promise.all(responses.map(response => response.text()));
+                                })
+                                .then(results => {
+                                    // 检查是否有清理操作失败
+                                    const allSuccessful = results.every(result => result === 'success');
+                                    if (allSuccessful) {
+                                        alert('重置成功！');
+                                    } else {
+                                        alert('部分操作完成，但清理诊室占用信息时出现问题。');
+                                    }
+                                    
+                                    // 重置配置区到初始状态的空白
+                                    document.getElementById('configPanel').style.display = 'none';
+                                    document.querySelectorAll('.schedule-cell').forEach(c => {
+                                        c.classList.remove('selected');
+                                    });
+                                    window.currentSelectedCell = null;
+                                    
+                                    // 重新加载数据以更新显示
+                                    setTimeout(() => {
+                                        window.preloadScheduleData();
+                                        setTimeout(() => {
+                                            window.updateCellHoverEvents();
+                                        }, 100);
+                                    }, 100);
+                                })
+                                .catch(error => {
+                                    console.error('清理诊室占用信息失败:', error);
+                                    alert('重置基本完成，但清理诊室占用信息时出现问题。');
+                                    
+                                    // 重置配置区到初始状态的空白
+                                    document.getElementById('configPanel').style.display = 'none';
+                                    document.querySelectorAll('.schedule-cell').forEach(c => {
+                                        c.classList.remove('selected');
+                                    });
+                                    window.currentSelectedCell = null;
+                                    
+                                    // 重新加载数据以更新显示
+                                    setTimeout(() => {
+                                        window.preloadScheduleData();
+                                        setTimeout(() => {
+                                            window.updateCellHoverEvents();
+                                        }, 100);
+                                    }, 100);
+                                });
+                        } else {
+                            alert('重置失败：' + result);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('重置排班失败:', error);
+                        alert('重置失败：' + error.message);
+                    });
+            }
+        };
+
+        // 复制上周排班
+        window.copyPreviousWeek = function () {
+            if (!window.currentDepartmentId) {
+                alert('请先选择科室');
+                return;
+            }
+
+            if (!window.currentWeekStart || !window.currentWeekEnd) {
+                alert('请先选择周次');
+                return;
+            }
+
+            // 检查是否为过去或当前周
+            const today = new Date();
+            if (today >= window.currentWeekStart && today <= window.currentWeekEnd) {
+                alert('当前时间处于所选周内，不支持复制上周排班！');
+                return;
+            }
+
+            if (today > window.currentWeekEnd) {
+                alert('所选周时间已过，无法复制上周排班！');
+                return;
+            }
+
+            // 确认复制
+            if (confirm('确定要复制上周的排班到本周吗？')) {
+                fetch('/schedule/copy-previous-week', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        startDate: window.currentWeekStart.toISOString().split('T')[0],
+                        endDate: window.currentWeekEnd.toISOString().split('T')[0],
+                        departmentId: window.currentDepartmentId
+                    })
+                })
+                    .then(response => response.text())
+                    .then(result => {
+                        if (result === 'success') {
+                            alert('复制成功！');
+                        } else {
+                            alert('复制失败：' + result);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('复制排班失败:', error);
+                        alert('复制失败：' + error.message);
+                    });
+            }
+        };
+
+        // 导出排班表
+        window.exportSchedule = function (exportType) {
+            if (!window.currentDepartmentId) {
+                alert('请先选择科室');
+                return;
+            }
+
+            if (!window.currentWeekStart || !window.currentWeekEnd) {
+                alert('请先选择周次');
+                return;
+            }
+
+            fetch('/schedule/export-schedule', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    exportType: exportType,
+                    startDate: window.currentWeekStart.toISOString().split('T')[0],
+                    endDate: window.currentWeekEnd.toISOString().split('T')[0],
+                    departmentId: window.currentDepartmentId
+                })
+            })
+                .then(response => {
+                    if (response.ok) {
+                        return response.blob();
+                    } else {
+                        throw new Error('导出失败');
+                    }
+                })
+                .then(blob => {
+                    // 创建下载链接
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = exportType === 'week' ? '周排班表.xlsx' : '月排班表.xlsx';
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                })
+                .catch(error => {
+                    console.error('导出排班表失败:', error);
+                    alert('导出失败：' + error.message);
+                });
+        };
+
+        function initializePage() {
+            console.log('开始初始化排班页面...');
+
+            // 初始化科室下拉框
+            if (typeof window.loadDepartments === 'function') {
+                window.loadDepartments();
+            }
+
+            // 初始化年份选择
+            if (typeof window.loadYears === 'function') {
+                window.loadYears();
+            }
+
+            // 初始化月历
+            if (typeof window.generateCalendar === 'function') {
+                window.generateCalendar();
+            }
+
+            // 绑定事件
+            if (typeof window.bindEvents === 'function') {
+                window.bindEvents();
+            }
+
+            // 初始化当前周
+            if (typeof window.initializeCurrentWeek === 'function') {
+                window.initializeCurrentWeek();
+            }
+
+            console.log('页面初始化完成');
+        }
+
+        // 延迟一小段时间执行，确保DOM已经渲染
+        setTimeout(function() {
+            initializePage();
+        }, 100);
+        
+        // 预加载排班数据
+        window.preloadScheduleData = function() {
+            if (!window.currentDepartmentId || !window.currentWeekStart || !window.currentWeekEnd) {
+                console.log('科室或周次未选择，无法预加载数据');
+                return;
+            }
+            
+            // 构建查询参数
+            const startDate = `${window.currentWeekStart.getFullYear()}-${(window.currentWeekStart.getMonth() + 1).toString().padStart(2, '0')}-${window.currentWeekStart.getDate().toString().padStart(2, '0')}`;
+            const endDate = `${window.currentWeekEnd.getFullYear()}-${(window.currentWeekEnd.getMonth() + 1).toString().padStart(2, '0')}-${window.currentWeekEnd.getDate().toString().padStart(2, '0')}`;
+            
+            // 先将所有单元格重置为默认状态
+            document.querySelectorAll('.schedule-cell').forEach(cell => {
+                const statusDiv = cell.querySelector('.schedule-status');
+                if (statusDiv) {
+                    statusDiv.textContent = '--';
+                    statusDiv.style.color = '#6c757d';
+                    statusDiv.style.fontWeight = 'normal';
+                }
+            });
+            
+            // 查询科室该周的排班数据
+            fetch(`/schedule/room-busy-data?departmentId=${window.currentDepartmentId}&startDate=${startDate}&endDate=${endDate}`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log('预加载的排班数据:', data);
+                    window.scheduleDataCache = data;
+                    
+                    // 更新单元格中的排班状态
+                    updateScheduleStatusInCells(data);
+                })
+                .catch(error => {
+                    console.error('预加载排班数据失败:', error);
+                });
+        };
+        
+        // 更新单元格中的排班状态
+        function updateScheduleStatusInCells(scheduleData) {
+            // 遍历所有排班单元格
+            document.querySelectorAll('.schedule-cell').forEach(cell => {
+                const date = cell.dataset.date;
+                const timeSlot = cell.dataset.timeSlot;
+                
+                // 获取对应的排班状态
+                const statusDiv = cell.querySelector('.schedule-status');
+                
+                if (date && timeSlot) {
+                    if (scheduleData && scheduleData[date] && scheduleData[date][timeSlot] && scheduleData[date][timeSlot].occupiedCount > 0) {
+                        // 如果存在排班记录，显示"有排班记录"
+                        statusDiv.textContent = '有排班记录';
+                        statusDiv.style.color = '#28a745'; // 绿色表示有排班
+                        statusDiv.style.fontWeight = 'bold';
+                    } else {
+                        // 如果不存在排班记录，显示"无排班记录"
+                        statusDiv.textContent = '无排班记录';
+                        statusDiv.style.color = '#6c757d'; // 灰色表示无排班
+                        statusDiv.style.fontWeight = 'normal';
+                    }
+                } else {
+                    // 如果单元格没有日期或时间段数据，显示默认状态
+                    statusDiv.textContent = '--';
+                    statusDiv.style.color = '#6c757d';
+                    statusDiv.style.fontWeight = 'normal';
+                }
+            });
+        }
+        
+        // 更新单元格悬停事件
+        window.updateCellHoverEvents = function() {
+            // 移除之前的悬停事件
+            document.querySelectorAll('.schedule-cell').forEach(cell => {
+                // 移除现有的悬停事件
+                cell.removeEventListener('mouseenter', cell._mouseenterHandler);
+                cell.removeEventListener('mouseleave', cell._mouseleaveHandler);
+                
+                // 添加新的悬停事件
+                const mouseEnterHandler = function() {
+                    if (!window.currentDepartmentId) return;
+                    
+                    const date = this.dataset.date;
+                    const timeSlot = this.dataset.timeSlot;
+                    
+                    if (!date || !timeSlot) return;
+                    
+                    // 从缓存中获取数据
+                    if (window.scheduleDataCache && window.scheduleDataCache[date] && window.scheduleDataCache[date][timeSlot]) {
+                        const info = window.scheduleDataCache[date][timeSlot];
+                        const tooltip = document.createElement('div');
+                        tooltip.className = 'tooltip-info';
+                        tooltip.textContent = `已排 ${info.occupiedCount} 人，剩余诊室 ${info.availableCount} 个`;
+                        
+                        // 定位提示框
+                        const rect = this.getBoundingClientRect();
+                        tooltip.style.left = rect.left + window.scrollX + 'px';
+                        tooltip.style.top = rect.top + window.scrollY - 30 + 'px';
+                        
+                        document.body.appendChild(tooltip);
+                        
+                        // 保存tooltip引用
+                        this._tooltip = tooltip;
+                    }
+                };
+                
+                const mouseLeaveHandler = function() {
+                    if (this._tooltip) {
+                        document.body.removeChild(this._tooltip);
+                        this._tooltip = null;
+                    }
+                };
+                
+                cell.addEventListener('mouseenter', mouseEnterHandler);
+                cell.addEventListener('mouseleave', mouseLeaveHandler);
+                
+                // 保存事件处理函数引用，以便后续移除
+                cell._mouseenterHandler = mouseEnterHandler;
+                cell._mouseleaveHandler = mouseLeaveHandler;
+            });
+        };
+        
+        // 修改bindEvents函数，添加在切换周时预加载数据
+        const originalBindEvents = window.bindEvents;
+        window.bindEvents = function() {
+            originalBindEvents();
+            
+            // 添加周切换事件监听（先移除可能存在的监听器）
+            const weekSelectBtn = document.getElementById('weekSelectBtn');
+            if (weekSelectBtn._weekSelectHandler) {
+                weekSelectBtn.removeEventListener('click', weekSelectBtn._weekSelectHandler);
+            }
+            
+            const weekSelectHandler = function() {
+                // 等待周选择菜单展开后，添加选择事件监听
+                setTimeout(() => {
+                    const weekOptions = document.querySelectorAll('.week-option');
+                    weekOptions.forEach(option => {
+                        option.addEventListener('click', function() {
+                            setTimeout(() => {
+                                window.preloadScheduleData();
+                                setTimeout(() => {
+                                    window.updateCellHoverEvents();
+                                }, 100);
+                            }, 100);
+                        });
+                    });
+                }, 100);
+            };
+            
+            weekSelectBtn.addEventListener('click', weekSelectHandler);
+            weekSelectBtn._weekSelectHandler = weekSelectHandler;
+            
+            // 为科室选择添加事件监听（先移除可能存在的监听器）
+            const deptSelect = document.getElementById('departmentSelect');
+            if (deptSelect._deptChangeHandler) {
+                deptSelect.removeEventListener('change', deptSelect._deptChangeHandler);
+            }
+            
+            const deptChangeHandler = function() {
+                setTimeout(() => {
+                    window.preloadScheduleData();
+                    setTimeout(() => {
+                        window.updateCellHoverEvents();
+                    }, 100);
+                }, 100);
+            };
+            
+            deptSelect.addEventListener('change', deptChangeHandler);
+            deptSelect._deptChangeHandler = deptChangeHandler;
+        };
+        
+        // 修改initializeCurrentWeek函数，使其调用预加载
+        const originalInitializeCurrentWeek = window.initializeCurrentWeek;
+        window.initializeCurrentWeek = function() {
+            originalInitializeCurrentWeek();
+            
+            // 延迟预加载数据
+            setTimeout(() => {
+                window.preloadScheduleData();
+                setTimeout(() => {
+                    window.updateCellHoverEvents();
+                }, 100);
+            }, 100);
+        };
+        
+        // 修改generateCalendar函数，使其调用预加载
+        const originalGenerateCalendar = window.generateCalendar;
+        window.generateCalendar = function() {
+            originalGenerateCalendar();
+            
+            // 延迟预加载数据
+            setTimeout(() => {
+                window.preloadScheduleData();
+                setTimeout(() => {
+                    window.updateCellHoverEvents();
+                }, 100);
+            }, 100);
+        };
+    </script>
+</div>

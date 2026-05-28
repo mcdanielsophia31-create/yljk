@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>医疗健康管理系统 - 登录</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-blue: #0d6efd;
+            --primary-blue-light: #e7f1ff;
+            --primary-blue-dark: #0a58ca;
+            --medical-white: #ffffff;
+            --health-green: #198754;
+            --health-green-light: #d1e7dd;
+            --text-gray: #6c757d;
+            --border-gray: #dee2e6;
+        }
+
+        body {
+            background: url("/js/bg.png") no-repeat center center fixed;
+            background-size: cover;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        }
+
+        .login-card {
+            background: var(--medical-white);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            padding: 2.5rem;
+            width: 100%;
+            max-width: 420px;
+            transition: all 0.3s ease;
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .login-header i {
+            font-size: 2.5rem;
+            color: var(--primary-blue);
+            margin-bottom: 0.5rem;
+        }
+
+        .login-header h2 {
+            color: var(--primary-blue);
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .login-header small {
+            color: var(--text-gray);
+        }
+
+        .input-group {
+            margin-bottom: 1rem;
+        }
+
+        .input-group-text {
+            background: var(--primary-blue-light);
+            border: 1px solid var(--border-gray);
+            color: var(--primary-blue);
+        }
+
+        .form-control {
+            border: 1px solid var(--border-gray);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            transition: all 0.2s ease;
+        }
+
+        .form-control:focus {
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-dark) 100%);
+            border: none;
+            border-radius: 8px;
+            padding: 0.75rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary:hover {
+            transform: scale(1.02);
+            box-shadow: 0 4px 12px rgba(13, 110, 253, 0.3);
+        }
+
+        .btn-outline-secondary {
+            border: 1px solid var(--border-gray);
+            color: var(--text-gray);
+            background: transparent;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-outline-secondary:hover {
+            background: var(--primary-blue-light);
+            color: var(--primary-blue);
+        }
+
+        .form-check-input:checked {
+            background-color: var(--primary-blue);
+            border-color: var(--primary-blue);
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: var(--text-gray);
+        }
+
+        .hospital-select {
+            margin-bottom: 1.5rem;
+        }
+
+        .role-select {
+            margin-bottom: 1.5rem;
+        }
+
+        .role-option {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            margin: 0 0.25rem;
+            border: 2px solid var(--border-gray);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: var(--text-gray);
+        }
+
+        .role-option:hover {
+            border-color: var(--primary-blue);
+        }
+
+        .role-option.active {
+            background: var(--primary-blue-light);
+            border-color: var(--primary-blue);
+            color: var(--primary-blue);
+        }
+
+        .role-option.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .footer-links {
+            text-align: center;
+            margin-top: 1.5rem;
+            color: var(--text-gray);
+            font-size: 0.875rem;
+        }
+
+        .footer-links a {
+            color: var(--primary-blue);
+            text-decoration: none;
+        }
+
+        .footer-links a:hover {
+            text-decoration: underline;
+        }
+
+        .form-link {
+            color: var(--primary-blue);
+            text-decoration: none;
+            font-size: 0.875rem;
+        }
+
+        .form-link:hover {
+            text-decoration: underline;
+        }
+
+        .login-section {
+            display: none;
+        }
+
+        .login-section.active {
+            display: block;
+        }
+
+        .fade-transition {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s ease;
+        }
+
+        .fade-transition.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .error-message {
+            color: #dc3545;
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+        }
+    </style>
+</head>
+<body>
+<div class="login-card">
+    <!-- 患者登录区域 -->
+    <div id="patientLogin" class="login-section active fade-transition">
+        <div class="login-header">
+            <i class="fas fa-user-injured"></i>
+            <h2>医疗健康管理系统</h2>
+            <small>患者登录</small>
+        </div>
+
+        <!-- 显示错误消息 -->
+        <div th:if="${param.error}" class="alert alert-danger mb-3" id="patient-login-error">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <span th:if="${param.error[0]} == 'wrong_user_type'">
+                            无效的登录方式：您的账号类型无法通过此登录入口登录
+                        </span>
+                        <span th:unless="${param.error[0]} == 'wrong_user_type'">
+                            登录失败：用户名或密码错误
+                        </span>
+                    </span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" style="margin-left: 10px;"></button>
+            </div>
+        </div>
+
+        <form action="/login" method="post">
+            <div class="input-group">
+                    <span class="input-group-text">
+                        <i class="fas fa-user"></i>
+                    </span>
+                <input type="text" class="form-control" name="username" placeholder="请输入手机号" required>
+            </div>
+
+            <div class="input-group position-relative">
+                    <span class="input-group-text">
+                        <i class="fas fa-lock"></i>
+                    </span>
+                <input type="password" class="form-control" name="password" id="patientPassword" placeholder="请输入密码" required>
+                <span class="password-toggle" onclick="togglePassword('patientPassword')">
+                        <i class="fas fa-eye"></i>
+                    </span>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="remember-me" id="patientRemember">
+                    <label class="form-check-label" for="patientRemember">
+                        记住我
+                    </label>
+                </div>
+                <a href="#" class="form-link" onclick="openForgotPasswordModal('PATIENT')">忘记密码？</a>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100 mb-3">
+                <i class="fas fa-sign-in-alt me-2"></i>患者登录
+            </button>
+
+            <div class="text-center">
+                <p class="mb-2">
+                    <a href="/patient/register" class="form-link">
+                        <i class="fas fa-user-plus me-1"></i>没有账号？立即注册
+                    </a>
+                </p>
+                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="switchToInstitution()">
+                    <i class="fas fa-building me-1"></i>切换至机构人员登录
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- 机构人员登录区域 -->
+    <div id="institutionLogin" class="login-section fade-transition">
+        <div class="login-header">
+            <i class="fas fa-hospital"></i>
+            <h2>医疗健康管理系统</h2>
+            <small>机构人员登录</small>
+        </div>
+
+        <!-- 显示错误消息 -->
+        <div th:if="${param.error}" class="alert alert-danger mb-3" id="institution-login-error">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <span th:if="${param.error[0]} == 'wrong_user_type'">
+                            无效的登录方式：您的账号类型无法通过此登录入口登录
+                        </span>
+                        <span th:unless="${param.error[0]} == 'wrong_user_type'">
+                            登录失败：用户名或密码错误
+                        </span>
+                    </span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" style="margin-left: 10px;"></button>
+            </div>
+        </div>
+
+        <form action="/login" method="post">
+            <div class="hospital-select">
+                <label class="form-label mb-2">选择医院</label>
+                <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="fas fa-hospital"></i>
+                        </span>
+                    <select class="form-select" id="hospitalSelect" name="hospitalId" onchange="toggleRoleSelection()" required>
+                        <option value="">请选择医院</option>
+                        <option th:each="hospital : ${hospitals}" th:value="${hospital.id}" th:text="${hospital.name}"></option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="role-select" id="roleSelection" style="display: none;">
+                <label class="form-label mb-2">选择角色</label>
+                <div class="d-flex justify-content-center mb-3">
+                    <div class="role-option" onclick="selectRole('admin')">
+                        <i class="fas fa-user-shield me-1"></i>医院管理员
+                    </div>
+                    <div class="role-option" onclick="selectRole('doctor')">
+                        <i class="fas fa-user-md me-1"></i>医生
+                    </div>
+                </div>
+            </div>
+
+            <div id="accountSection" style="display: none;">
+                <input type="hidden" name="role" id="institutionRole" value="">
+                <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="fas fa-user"></i>
+                        </span>
+                    <input type="text" class="form-control" name="username" placeholder="请输入工号/账号" required>
+                </div>
+
+                <div class="input-group position-relative">
+                        <span class="input-group-text">
+                            <i class="fas fa-lock"></i>
+                        </span>
+                    <input type="password" class="form-control" name="password" id="institutionPassword" placeholder="请输入密码" required>
+                    <span class="password-toggle" onclick="togglePassword('institutionPassword')">
+                            <i class="fas fa-eye"></i>
+                        </span>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="remember-me" id="institutionRemember">
+                        <label class="form-check-label" for="institutionRemember">
+                            记住我
+                        </label>
+                    </div>
+                    <a href="#" class="form-link" onclick="openForgotPasswordModal(selectedRole === 'admin' ? 'ADMIN' : 'DOCTOR')">忘记密码？</a>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100 mb-3">
+                    <i class="fas fa-sign-in-alt me-2"></i>机构人员登录
+                </button>
+            </div>
+
+            <div class="text-center">
+                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="switchToPatient()">
+                    <i class="fas fa-arrow-left me-1"></i>返回患者登录
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div class="footer-links">
+        <p>
+            <a href="#">隐私政策</a> |
+            <a href="#">用户协议</a> |
+            <a href="#">技术支持</a>
+        </p>
+        <small class="text-muted">© 2025 医疗健康管理系统. 保留所有权利.</small>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    let selectedRole = null;
+
+    function togglePassword(inputId) {
+        const input = document.getElementById(inputId);
+        const icon = input.nextElementSibling.querySelector('i');
+
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+        } else {
+            input.type = 'password';
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+        }
+    }
+
+    function switchToInstitution() {
+        document.getElementById('patientLogin').classList.remove('active');
+        document.getElementById('institutionLogin').classList.add('active');
+    }
+
+    function switchToPatient() {
+        document.getElementById('institutionLogin').classList.remove('active');
+        document.getElementById('patientLogin').classList.add('active');
+
+        // 重置机构登录表单
+        document.getElementById('hospitalSelect').value = '';
+        document.getElementById('roleSelection').style.display = 'none';
+        document.getElementById('accountSection').style.display = 'none';
+        selectedRole = null;
+    }
+
+    function toggleRoleSelection() {
+        const hospitalSelect = document.getElementById('hospitalSelect');
+        const roleSelection = document.getElementById('roleSelection');
+        const accountSection = document.getElementById('accountSection');
+
+        if (hospitalSelect.value) {
+            roleSelection.style.display = 'block';
+            roleSelection.querySelectorAll('.role-option').forEach(option => {
+                option.classList.remove('disabled');
+            });
+        } else {
+            roleSelection.style.display = 'none';
+            accountSection.style.display = 'none';
+            selectedRole = null;
+        }
+    }
+
+    function selectRole(role) {
+        // 移除之前的选择
+        document.querySelectorAll('.role-option').forEach(option => {
+            option.classList.remove('active');
+        });
+
+        // 添加当前选择
+        event.target.classList.add('active');
+        selectedRole = role;
+        const roleInput = document.getElementById('institutionRole');
+        if (roleInput) {
+            roleInput.value = selectedRole === 'admin' ? 'ADMIN' : 'DOCTOR';
+        }
+
+        // 显示账号输入区域
+        document.getElementById('accountSection').style.display = 'block';
+    }
+
+    // 为角色选项添加点击事件
+    document.addEventListener('DOMContentLoaded', function() {
+        const roleOptions = document.querySelectorAll('.role-option');
+        roleOptions.forEach(option => {
+            option.addEventListener('click', function() {
+                // 移除之前的选择
+                roleOptions.forEach(opt => opt.classList.remove('active'));
+                // 添加当前选择
+                this.classList.add('active');
+                selectedRole = this.textContent.includes('管理员') ? 'admin' : 'doctor';
+
+                // 显示账号输入区域
+                document.getElementById('accountSection').style.display = 'block';
+                const roleInput = document.getElementById('institutionRole');
+                if (roleInput) {
+                    roleInput.value = selectedRole === 'admin' ? 'ADMIN' : 'DOCTOR';
+                }
+            });
+        });
+    });
+    function openForgotPasswordModal(role) {
+        const modalHtml = `
+                <div class="modal fade" id="forgotPwdModal" tabindex="-1">
+                  <div class="modal-dialog">
+                    <div class="modal-content">
+                      <div class="modal-header">
+                        <h5 class="modal-title">忘记密码</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                      </div>
+                      <div class="modal-body">
+                        <div class="mb-3">
+                          <label class="form-label">用户名或手机号</label>
+                          <input type="text" class="form-control" id="fpIdentifier" placeholder="请输入用户名或手机号">
+                        </div>
+                        <div class="mb-3">
+                          <label class="form-label">新密码</label>
+                          <input type="password" class="form-control" id="fpNewPwd" placeholder="请输入新密码">
+                        </div>
+                        <div class="mb-3">
+                          <label class="form-label">确认新密码</label>
+                          <input type="password" class="form-control" id="fpConfirmPwd" placeholder="请再次输入新密码">
+                        </div>
+                        <div id="fpMsg" class="text-danger" style="min-height: 20px;"></div>
+                      </div>
+                      <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                        <button type="button" class="btn btn-primary" onclick="submitForgotPassword('${role}')">提交</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>`;
+        const container = document.createElement('div');
+        container.innerHTML = modalHtml;
+        document.body.appendChild(container);
+        const modalEl = document.getElementById('forgotPwdModal');
+        const modal = new bootstrap.Modal(modalEl);
+        modal.show();
+        modalEl.addEventListener('hidden.bs.modal', () => {
+            container.remove();
+        });
+    }
+    function submitForgotPassword(role) {
+        const idEl = document.getElementById('fpIdentifier');
+        const npEl = document.getElementById('fpNewPwd');
+        const cpEl = document.getElementById('fpConfirmPwd');
+        const msgEl = document.getElementById('fpMsg');
+        const identifier = idEl.value.trim();
+        const newPassword = npEl.value;
+        const confirmPassword = cpEl.value;
+        if (!identifier) { msgEl.textContent = '请输入用户名或手机号'; return; }
+        if (!newPassword) { msgEl.textContent = '请输入新密码'; return; }
+        if (newPassword !== confirmPassword) { msgEl.textContent = '两次输入的密码不一致'; return; }
+        if (role === 'PATIENT') {
+            fetch('/patient/forgot-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ identifier, newPassword, confirmPassword })
+            }).then(r => r.json())
+                .then(res => {
+                    if (res && res.success) {
+                        alert('密码重置成功，请使用新密码登录');
+                        const modalEl = document.getElementById('forgotPwdModal');
+                        const modal = bootstrap.Modal.getInstance(modalEl);
+                        modal && modal.hide();
+                    } else {
+                        msgEl.textContent = res && res.message ? res.message : '重置失败';
+                    }
+                })
+                .catch(() => { msgEl.textContent = '请求失败，请稍后重试'; });
+        } else if (role === 'DOCTOR') {
+            const hospitalId = (document.getElementById('hospitalSelect') || {}).value || '';
+            if (!hospitalId) { msgEl.textContent = '请选择医院'; return; }
+            fetch('/doctor/forgot-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ identifier, newPassword, confirmPassword, hospitalId })
+            }).then(r => r.json())
+                .then(res => {
+                    if (res && res.success) {
+                        alert('密码重置成功，请使用新密码登录');
+                        const modalEl = document.getElementById('forgotPwdModal');
+                        const modal = bootstrap.Modal.getInstance(modalEl);
+                        modal && modal.hide();
+                    } else {
+                        msgEl.textContent = res && res.message ? res.message : '重置失败';
+                    }
+                })
+                .catch(() => { msgEl.textContent = '请求失败，请稍后重试'; });
+        } else if (role === 'ADMIN') {
+            const hospitalId = (document.getElementById('hospitalSelect') || {}).value || '';
+            if (!hospitalId) { msgEl.textContent = '请选择医院'; return; }
+            fetch('/admin/forgot-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ identifier, newPassword, confirmPassword, hospitalId })
+            }).then(r => r.json())
+                .then(res => {
+                    if (res && res.success) {
+                        alert('密码重置成功，请使用新密码登录');
+                        const modalEl = document.getElementById('forgotPwdModal');
+                        const modal = bootstrap.Modal.getInstance(modalEl);
+                        modal && modal.hide();
+                    } else {
+                        msgEl.textContent = res && res.message ? res.message : '重置失败';
+                    }
+                })
+                .catch(() => { msgEl.textContent = '请求失败，请稍后重试'; });
+        }
+    }
+</script>
+
+<!-- 显示错误消息的脚本 -->
+<script>
+    // 检查URL参数中是否有错误信息
+    const urlParams = new URLSearchParams(window.location.search);
+    const hasError = urlParams.has('error');
+
+    if (hasError) {
+        const errorType = urlParams.get('error');
+        let errorMessage = '登录失败：用户名或密码错误';
+
+        if (errorType === 'wrong_user_type') {
+            errorMessage = '无效的登录方式：您的账号类型无法通过此登录入口登录';
+        } else if (errorType === 'hospital_mismatch') {
+            errorMessage = '医院不匹配：您的账号不属于选择的医院';
+        } else if (errorType === 'invalid_hospital_id') {
+            errorMessage = '无效的医院ID';
+        }
+
+        // 显示错误消息到页面中
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'alert alert-danger';
+        errorDiv.style.position = 'fixed';
+        errorDiv.style.top = '20px';
+        errorDiv.style.right = '20px';
+        errorDiv.style.zIndex = '9999';
+        errorDiv.style.maxWidth = '400px';
+        errorDiv.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span><i class="fas fa-exclamation-triangle me-2"></i>${errorMessage}</span>
+                    <button type="button" class="btn-close" onclick="this.parentElement.parentElement.remove();" style="margin-left: 10px;"></button>
+                </div>
+            `;
+        document.body.appendChild(errorDiv);
+
+        // 3秒后自动移除错误消息
+        setTimeout(() => {
+            if (errorDiv.parentNode) {
+                errorDiv.remove();
+            }
+        }, 5000);
+
+        // 清除URL中的错误参数，避免刷新时重复显示
+        const newURL = window.location.toString().split('?')[0];
+        window.history.replaceState({}, document.title, newURL);
+    }
+
+    // 为表单输入添加监听器，当用户开始输入时隐藏错误消息
+    document.addEventListener('DOMContentLoaded', function() {
+        const forms = document.querySelectorAll('form');
+
+        forms.forEach(form => {
+            const inputs = form.querySelectorAll('input[type="text"], input[type="password"], select');
+
+            inputs.forEach(input => {
+                input.addEventListener('input', function() {
+                    // 如果URL中有错误参数，但用户开始输入，则移除错误参数
+                    if (hasError) {
+                        // 清除URL中的错误参数
+                        const newURL = window.location.toString().split('?')[0];
+                        window.history.replaceState({}, document.title, newURL);
+                    }
+
+                    // 隐藏页面上的错误提示
+                    const errorAlerts = document.querySelectorAll('.alert.alert-danger');
+                    errorAlerts.forEach(alert => {
+                        if (alert.querySelector('.btn-close')) {
+                            alert.remove();
+                        }
+                    });
+
+                    // 隐藏固定的错误提示div
+                    const patientErrorDiv = document.getElementById('patient-login-error');
+                    if (patientErrorDiv) {
+                        patientErrorDiv.style.display = 'none';
+                    }
+
+                    const institutionErrorDiv = document.getElementById('institution-login-error');
+                    if (institutionErrorDiv) {
+                        institutionErrorDiv.style.display = 'none';
+                    }
+
+                    // 同时移除动态创建的错误提示
+                    const dynamicErrorDiv = document.querySelector('div[style*="position: fixed"]');
+                    if (dynamicErrorDiv) {
+                        dynamicErrorDiv.remove();
+                    }
+                });
+            });
+
+            // 监听表单提交，重新显示错误提示
+            form.addEventListener('submit', function() {
+                // 提交时不做任何操作，错误提示将在服务器响应后处理
+            });
+        });
+    });
+</script>
+</body>
+</html>

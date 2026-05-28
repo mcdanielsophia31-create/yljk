@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div class="container-fluid p-0">
+
+    <div class="dashboard-header mb-4">
+        <div>
+            <h1>健康档案管理</h1>
+            <p class="text-muted">查看和管理患者的健康指标数据</p>
+        </div>
+        <div>
+            <button class="btn btn-primary-custom" onclick="openHealthModal()">
+                <i class="fas fa-plus me-2"></i>新增档案
+            </button>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label">筛选患者 ID</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        <input type="number" id="searchPatientId" class="form-control"
+                               placeholder="请输入患者ID" th:value="${currentPatientId}">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-primary-custom w-100" onclick="searchHealthProfiles()">
+                        查询
+                    </button>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-outline-secondary w-100" onclick="loadContent('/doctor/health-profiles', '健康档案')">
+                        重置
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light">
+                    <tr>
+                        <th class="ps-4">ID</th>
+                        <th>患者</th> <th>身高/体重</th>
+                        <th>BMI</th>
+                        <th>血压/心率</th>
+                        <th>血型</th>
+                        <th>体检日期</th>
+                        <th class="text-end pe-4">操作</th> </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="profile : ${profiles}">
+                        <td class="ps-4 fw-bold" th:text="${profile.id}">1</td>
+                        <td>
+                            <div class="d-flex flex-column">
+                                <span class="fw-bold" th:text="${profile.patientName}">张三</span>
+                                <small class="text-muted" th:text="${'ID: ' + profile.patientId}">ID: 1001</small>
+                            </div>
+                        </td>
+                        <td>
+                            <div th:text="${profile.height + ' cm'}">175 cm</div>
+                            <small class="text-muted" th:text="${profile.weight + ' kg'}">70 kg</small>
+                        </td>
+                        <td>
+                            <span class="badge"
+                                  th:classappend="${profile.bmi < 18.5 || profile.bmi > 24 ? 'bg-warning text-dark' : 'bg-success'}"
+                                  th:text="${profile.bmi}">22.5</span>
+                        </td>
+                        <td>
+                            <div th:text="${profile.bloodPressure}">120/80</div>
+                            <small class="text-muted" th:text="${profile.heartRate + ' bpm'}">75 bpm</small>
+                        </td>
+                        <td th:text="${profile.bloodType}">A</td>
+                        <td th:text="${profile.lastPhysicalDate}">2025-01-01</td>
+                        <td class="text-end pe-4">
+                            <button class="btn btn-sm btn-outline-info me-2"
+                                    th:onclick="'viewHealthProfile(' + ${profile.id} + ')'">
+                                <i class="fas fa-eye"></i> 查看
+                            </button>
+
+                            <button class="btn btn-sm btn-outline-primary"
+                                    th:onclick="'editHealthProfile(' + ${profile.id} + ')'">
+                                <i class="fas fa-edit"></i> 编辑
+                            </button>
+                        </td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(profiles)}">
+                        <td colspan="8" class="text-center py-5 text-muted">
+                            <i class="fas fa-inbox fa-3x mb-3"></i>
+                            <p>暂无相关健康档案数据</p>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="healthProfileModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">新增健康档案</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="healthProfileForm">
+                    <input type="hidden" id="profileId" name="id">
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">患者 ID <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="formPatientId" name="patientId" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">体检日期</label>
+                            <input type="date" class="form-control" id="formDate" name="lastPhysicalDate">
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">身高 (cm)</label>
+                            <input type="number" step="0.1" class="form-control" id="formHeight" name="height">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">体重 (kg)</label>
+                            <input type="number" step="0.1" class="form-control" id="formWeight" name="weight">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">血型</label>
+                            <select class="form-select" id="formBloodType" name="bloodType">
+                                <option value="">请选择</option>
+                                <option value="A">A型</option>
+                                <option value="B">B型</option>
+                                <option value="AB">AB型</option>
+                                <option value="O">O型</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">血压 (mmHg)</label>
+                            <input type="text" class="form-control" id="formBloodPressure" name="bloodPressure" placeholder="例如: 120/80">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">心率 (次/分)</label>
+                            <input type="number" class="form-control" id="formHeartRate" name="heartRate">
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label">生活习惯</label>
+                            <textarea class="form-control" id="formLifestyle" name="lifestyleHabits" rows="2"></textarea>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">家族病史</label>
+                            <textarea class="form-control" id="formFamilyHistory" name="familyMedicalHistory" rows="2"></textarea>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" id="saveBtn" onclick="submitHealthProfile()">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 定义模态框实例变量
+    var healthModal;
+
+    // 辅助函数：设置表单字段的禁用状态
+    function setFormDisabled(disabled) {
+        var form = document.getElementById('healthProfileForm');
+        var elements = form.elements;
+        for (var i = 0; i < elements.length; i++) {
+            elements[i].disabled = disabled;
+        }
+    }
+
+    // 打开新增模态框
+    function openHealthModal() {
+        // 重置表单
+        document.getElementById('healthProfileForm').reset();
+        document.getElementById('profileId').value = '';
+        document.getElementById('modalTitle').innerText = '新增健康档案';
+
+        // 1. 确保所有输入框可用（重置查看模式的禁用状态）
+        setFormDisabled(false);
+        // 2. 显示保存按钮
+        document.getElementById('saveBtn').style.display = 'block';
+        // 3. 新增时允许输入ID
+        document.getElementById('formPatientId').readOnly = false;
+
+        // 显示模态框
+        healthModal = new bootstrap.Modal(document.getElementById('healthProfileModal'));
+        healthModal.show();
+    }
+
+    // 打开查看模态框 (新增功能)
+    function viewHealthProfile(id) {
+        fetch('/doctor/api/health-profiles/' + id)
+            .then(response => response.json())
+            .then(data => {
+                populateForm(data);
+
+                document.getElementById('modalTitle').innerText = '查看健康档案详情';
+
+                // 1. 禁用所有输入框
+                setFormDisabled(true);
+                // 2. 隐藏保存按钮
+                document.getElementById('saveBtn').style.display = 'none';
+
+                healthModal = new bootstrap.Modal(document.getElementById('healthProfileModal'));
+                healthModal.show();
+            })
+            .catch(error => alert('获取详情失败: ' + error));
+    }
+
+    // 打开编辑模态框
+    function editHealthProfile(id) {
+        fetch('/doctor/api/health-profiles/' + id)
+            .then(response => response.json())
+            .then(data => {
+                populateForm(data);
+
+                document.getElementById('modalTitle').innerText = '编辑健康档案';
+
+                // 1. 确保输入框可用
+                setFormDisabled(false);
+                // 2. 显示保存按钮
+                document.getElementById('saveBtn').style.display = 'block';
+                // 3. 编辑时锁定患者ID
+                document.getElementById('formPatientId').readOnly = true;
+
+                healthModal = new bootstrap.Modal(document.getElementById('healthProfileModal'));
+                healthModal.show();
+            })
+            .catch(error => alert('获取详情失败: ' + error));
+    }
+
+    // 提取公共的数据填充逻辑
+    function populateForm(data) {
+        document.getElementById('profileId').value = data.id;
+        document.getElementById('formPatientId').value = data.patientId;
+        document.getElementById('formHeight').value = data.height;
+        document.getElementById('formWeight').value = data.weight;
+        document.getElementById('formBloodType').value = data.bloodType;
+        document.getElementById('formBloodPressure').value = data.bloodPressure;
+        document.getElementById('formHeartRate').value = data.heartRate;
+        document.getElementById('formDate').value = data.lastPhysicalDate;
+        document.getElementById('formLifestyle').value = data.lifestyleHabits || '';
+        document.getElementById('formFamilyHistory').value = data.familyMedicalHistory || '';
+    }
+
+    // 提交表单 (保持不变)
+    function submitHealthProfile() {
+        var form = document.getElementById('healthProfileForm');
+        var formData = new FormData(form);
+
+        fetch('/doctor/health-profiles/save', {
+            method: 'POST',
+            body: formData
+        })
+            .then(response => {
+                if (response.ok) {
+                    healthModal.hide();
+                    document.querySelector('.modal-backdrop')?.remove();
+                    document.body.classList.remove('modal-open');
+                    document.body.style = '';
+                    loadContent('/doctor/health-profiles', '健康档案');
+                } else {
+                    return response.text().then(text => { throw new Error(text) });
+                }
+            })
+            .catch(error => {
+                alert('保存失败: ' + error.message);
+            });
+    }
+
+    // 搜索功能 (保持不变)
+    function searchHealthProfiles() {
+        var patientId = document.getElementById('searchPatientId').value;
+        var url = '/doctor/health-profiles';
+        if (patientId && patientId.trim() !== '') {
+            url += '?patientId=' + encodeURIComponent(patientId);
+        }
+        loadContent(url, '健康档案');
+    }
+</script>
+</body>
+</html>

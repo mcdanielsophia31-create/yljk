@@ -1,0 +1,1431 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>健康档案管理 - 医疗健康管理系统</title>
+    <!-- 引入Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- 引入Font Awesome图标 -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- 引入AOS动画库 -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <!-- 引入jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        :root {
+            --primary: #4a6cf7;
+            --primary-light: #e8edff;
+            --secondary: #6c757d;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #3b82f6;
+            --dark: #1e293b;
+            --light: #f8fafc;
+            --gray: #64748b;
+            --border: #e2e8f0;
+            --shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            --shadow-hover: 0 20px 40px rgba(0, 0, 0, 0.12);
+            --radius: 16px;
+            --radius-sm: 8px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', sans-serif;
+            color: var(--dark);
+            padding: 0;
+            overflow-x: hidden;
+        }
+
+        /* 主内容区域 */
+        .main-content {
+            margin-left: 260px;
+            padding: 30px;
+            min-height: 100vh;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* 头部区域 */
+        .page-header {
+            margin-bottom: 40px;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: white;
+            border-radius: var(--radius);
+            padding: 30px 40px;
+            box-shadow: var(--shadow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header-content::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary) 0%, #667eea 100%);
+        }
+
+        .page-title {
+            font-size: 2.2rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary) 0%, #667eea 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin: 0;
+            line-height: 1.2;
+        }
+
+        .page-subtitle {
+            color: var(--gray);
+            font-size: 1.05rem;
+            margin: 10px 0 0;
+            max-width: 600px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .btn-action {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: var(--radius-sm);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: var(--transition);
+            cursor: pointer;
+        }
+
+        .btn-action:hover {
+            background: #3a56d6;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(74, 108, 247, 0.3);
+        }
+
+        .btn-outline-action {
+            background: transparent;
+            color: var(--primary);
+            border: 2px solid var(--primary);
+            padding: 10px 22px;
+            border-radius: var(--radius-sm);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: var(--transition);
+            cursor: pointer;
+        }
+
+        .btn-outline-action:hover {
+            background: var(--primary-light);
+            transform: translateY(-2px);
+        }
+
+        /* 统计卡片 */
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: var(--radius);
+            padding: 30px;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary) 0%, #667eea 100%);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .stat-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            color: white;
+        }
+
+        .stat-icon.primary { background: linear-gradient(135deg, var(--primary) 0%, #667eea 100%); }
+        .stat-icon.success { background: linear-gradient(135deg, var(--success) 0%, #34d399 100%); }
+        .stat-icon.warning { background: linear-gradient(135deg, var(--warning) 0%, #fbbf24 100%); }
+        .stat-icon.info { background: linear-gradient(135deg, var(--info) 0%, #60a5fa 100%); }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--dark);
+            margin: 10px 0;
+            line-height: 1;
+        }
+
+        .stat-label {
+            color: var(--gray);
+            font-size: 0.95rem;
+            margin: 0;
+        }
+
+        .stat-trend {
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-top: 8px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .trend-up { color: var(--success); }
+        .trend-down { color: var(--danger); }
+
+        /* 筛选栏 */
+        .filter-bar {
+            background: white;
+            border-radius: var(--radius);
+            padding: 25px 30px;
+            box-shadow: var(--shadow);
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .filter-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .filter-label {
+            color: var(--dark);
+            font-weight: 600;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .filter-label i {
+            color: var(--primary);
+        }
+
+        .filter-select {
+            padding: 10px 15px;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            background: white;
+            color: var(--dark);
+            font-size: 0.95rem;
+            min-width: 180px;
+            transition: var(--transition);
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%234a6cf7' viewBox='0 0 16 16'%3E%3Cpath d='M8 11.5l-6-6 1.5-1.5L8 8.5l4.5-4.5L14 5.5l-6 6z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            padding-right: 40px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .filter-select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(74, 108, 247, 0.1);
+        }
+
+        .filter-select:hover {
+            border-color: var(--primary);
+        }
+
+        .search-box {
+            position: relative;
+            min-width: 280px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 20px 12px 45px;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            font-size: 0.95rem;
+            transition: var(--transition);
+            background: white;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(74, 108, 247, 0.1);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--gray);
+        }
+
+        /* 档案列表 */
+        .profile-list-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+        }
+
+        @media (max-width: 1200px) {
+            .profile-list-container {
+                grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            }
+        }
+
+        @media (max-width: 768px) {
+            .profile-list-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .profile-card {
+            background: white;
+            border-radius: var(--radius);
+            padding: 30px;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+            cursor: pointer;
+            border: 2px solid transparent;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .profile-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-hover);
+            border-color: var(--primary-light);
+        }
+
+        .profile-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary) 0%, #667eea 100%);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .card-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: var(--primary-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary);
+            font-size: 1.3rem;
+        }
+
+        .card-info h4 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--dark);
+            margin: 0;
+        }
+
+        .card-info p {
+            color: var(--gray);
+            font-size: 0.9rem;
+            margin: 4px 0 0;
+        }
+
+        .card-badge {
+            background: var(--primary-light);
+            color: var(--primary);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .health-metrics {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .metric-item {
+            background: var(--light);
+            border-radius: 10px;
+            padding: 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .metric-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary);
+            font-size: 1rem;
+        }
+
+        .metric-value {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--dark);
+            margin: 0;
+        }
+
+        .metric-label {
+            font-size: 0.8rem;
+            color: var(--gray);
+            margin: 2px 0 0;
+        }
+
+        .health-status {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+
+        .status-normal {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .status-alert {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+        }
+
+        .view-details {
+            color: var(--primary);
+            font-weight: 600;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: var(--transition);
+        }
+
+        .view-details:hover {
+            color: #3a56d6;
+            transform: translateX(3px);
+        }
+
+        /* 空状态 */
+        .empty-state {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 80px 40px;
+            background: white;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            border: 2px dashed var(--border);
+        }
+
+        .empty-icon {
+            width: 100px;
+            height: 100px;
+            background: var(--light);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 30px;
+            color: var(--gray);
+            font-size: 2.5rem;
+        }
+
+        .empty-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 15px;
+        }
+
+        .empty-description {
+            color: var(--gray);
+            font-size: 1rem;
+            max-width: 500px;
+            margin: 0 auto 30px;
+        }
+
+        /* 模态框样式 */
+        .modal-detail {
+            max-width: 900px;
+        }
+
+        .modal-content {
+            border-radius: var(--radius);
+            border: none;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, var(--primary) 0%, #667eea 100%);
+            color: white;
+            padding: 25px 30px;
+            border-bottom: none;
+        }
+
+        .modal-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .modal-body {
+            padding: 35px;
+            background: white;
+        }
+
+        .detail-section {
+            margin-bottom: 35px;
+        }
+
+        .section-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--primary-light);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .detail-item {
+            background: var(--light);
+            border-radius: 12px;
+            padding: 20px;
+            transition: var(--transition);
+        }
+
+        .detail-item:hover {
+            background: white;
+            box-shadow: var(--shadow);
+        }
+
+        .detail-label {
+            font-size: 0.9rem;
+            color: var(--gray);
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .detail-value {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--dark);
+            margin: 0;
+        }
+
+        .health-tips {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            border-radius: 12px;
+            padding: 25px;
+            margin-top: 10px;
+        }
+
+        .tip-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 12px;
+            color: var(--dark);
+        }
+
+        .tip-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .tip-item i {
+            color: var(--success);
+            margin-top: 4px;
+        }
+
+        /* AI助手按钮 */
+        .ai-assistant-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: linear-gradient(135deg, var(--primary) 0%, #667eea 100%);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 16px 32px;
+            font-size: 1rem;
+            font-weight: 600;
+            box-shadow: 0 10px 30px rgba(74, 108, 247, 0.3);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: var(--transition);
+            z-index: 1000;
+        }
+
+        .ai-assistant-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(74, 108, 247, 0.4);
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 1200px) {
+            .sidebar {
+                width: 80px;
+            }
+            .logo-text, .logo-subtitle,
+            .nav-link span, .nav-title,
+            .user-info, .badge-notification {
+                display: none;
+            }
+            .nav-link {
+                justify-content: center;
+                padding: 16px;
+            }
+            .nav-link i {
+                font-size: 1.2rem;
+            }
+            .main-content {
+                margin-left: 80px;
+                padding: 20px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                gap: 20px;
+                text-align: center;
+                padding: 25px;
+            }
+            .header-actions {
+                width: 100%;
+                justify-content: center;
+            }
+            .filter-bar {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 20px;
+            }
+            .filter-left {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .filter-group {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .filter-select, .search-box {
+                min-width: 100%;
+            }
+        }
+
+        /* 动画 */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-in {
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        /* 滚动条样式 */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--light);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary-light);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--primary);
+        }
+    </style>
+</head>
+<body>
+
+<!-- 主内容区域 -->
+<div class="main-content">
+    <!-- 页面头部 -->
+    <div class="page-header animate-in">
+        <div class="header-content">
+            <div>
+                <h1 class="page-title">
+                    <i class="fas fa-file-medical-alt me-3"></i>健康档案管理
+                </h1>
+                <p class="page-subtitle" th:text="'为 ' + ${user.realName?:'患者'} + ' 管理您的健康档案，实时掌握健康状况'"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 统计卡片 -->
+    <div class="stats-container animate-in" data-aos="fade-up">
+        <div class="stat-card">
+            <div class="stat-icon primary">
+                <i class="fas fa-file-medical"></i>
+            </div>
+            <h3 class="stat-value" th:text="${profileList != null ? profileList.size() : 0}">0</h3>
+            <p class="stat-label">健康档案总数</p>
+            <div class="stat-trend trend-up">
+                <i class="fas fa-arrow-up"></i>
+                <span>较上月增长12%</span>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon success">
+                <i class="fas fa-heartbeat"></i>
+            </div>
+            <h3 class="stat-value" id="normalCount">0</h3>
+            <p class="stat-label">健康状态良好</p>
+            <div class="stat-trend trend-up">
+                <i class="fas fa-arrow-up"></i>
+                <span>持续改善中</span>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon warning">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <h3 class="stat-value" id="warningCount">0</h3>
+            <p class="stat-label">需要关注指标</p>
+            <div class="stat-trend trend-down">
+                <i class="fas fa-arrow-down"></i>
+                <span>较上月减少8%</span>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon info">
+                <i class="fas fa-calendar-alt"></i>
+            </div>
+            <h3 class="stat-value" th:text="${currentYear ?: #dates.format(#dates.createNow(), 'yyyy')}">2025</h3>
+            <p class="stat-label">当前年份</p>
+            <div class="stat-trend">
+                <i class="fas fa-history"></i>
+                <span>档案持续更新</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 筛选栏 -->
+    <div class="filter-bar animate-in" data-aos="fade-up" data-aos-delay="100">
+        <div class="filter-left">
+            <div class="filter-group">
+                <div class="filter-label">
+                    <i class="fas fa-filter"></i>
+                    筛选条件：
+                </div>
+                <select class="filter-select" id="filterBy">
+                    <option value="all">全部档案</option>
+                    <option value="recent" selected>最近一年</option>
+                    <option value="normal">健康状态正常</option>
+                    <option value="warning">需要关注</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <div class="filter-label">
+                    <i class="fas fa-sort-amount-down"></i>
+                    排序方式：
+                </div>
+                <select class="filter-select" id="sortBy">
+                    <option value="date_desc">按建档时间降序</option>
+                    <option value="date_asc">按建档时间升序</option>
+                    <option value="id_desc">按档案ID降序</option>
+                    <option value="id_asc">按档案ID升序</option>
+                </select>
+            </div>
+
+            <div class="search-box">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" class="search-input" id="searchInput" placeholder="搜索档案编号、日期或内容...">
+            </div>
+        </div>
+
+        <div class="filter-right">
+            <span class="filter-label">
+                <i class="fas fa-info-circle"></i>
+                点击档案卡片查看详细健康信息
+            </span>
+        </div>
+    </div>
+
+    <!-- 档案列表 -->
+    <div class="profile-list-container">
+        <!-- 示例档案卡片（静态数据） -->
+        <div class="profile-card animate-in" data-aos="fade-up" data-id="25" data-date="2025-01-15" onclick="showProfileDetail(25)">
+            <div class="card-header">
+                <div class="card-title">
+                    <div class="card-icon">
+                        <i class="fas fa-stethoscope"></i>
+                    </div>
+                    <div class="card-info">
+                        <h4>档案编号: HP-25</h4>
+                        <p><i class="far fa-calendar-alt me-1"></i>2025年01月15日</p>
+                    </div>
+                </div>
+                <span class="card-badge">
+                    <i class="fas fa-calendar-check"></i>年度体检
+                </span>
+            </div>
+
+            <div class="health-metrics">
+                <div class="metric-item">
+                    <div class="metric-icon">
+                        <i class="fas fa-ruler-vertical"></i>
+                    </div>
+                    <div>
+                        <p class="metric-value">175.5 cm</p>
+                        <p class="metric-label">身高</p>
+                    </div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-icon">
+                        <i class="fas fa-weight"></i>
+                    </div>
+                    <div>
+                        <p class="metric-value">78.0 kg</p>
+                        <p class="metric-label">体重</p>
+                    </div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-icon">
+                        <i class="fas fa-calculator"></i>
+                    </div>
+                    <div>
+                        <p class="metric-value">25.3</p>
+                        <p class="metric-label">BMI指数</p>
+                    </div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-icon">
+                        <i class="fas fa-heartbeat"></i>
+                    </div>
+                    <div>
+                        <p class="metric-value">145/92</p>
+                        <p class="metric-label">血压</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="health-status">
+                <span class="status-badge status-warning">
+                    <i class="fas fa-exclamation-circle"></i>
+                    体重超重，血压偏高
+                </span>
+            </div>
+
+            <div class="card-footer">
+                <div>
+                    <p class="mb-0 text-muted"><small><i class="fas fa-user-md me-1"></i>医生建议：控制体重和血压</small></p>
+                </div>
+                <a href="#" class="view-details" onclick="event.stopPropagation(); showProfileDetail(25)">
+                    查看详情 <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+
+        <!-- 动态生成的实际档案卡片 -->
+        <div class="profile-card animate-in" th:each="profile : ${profileList}"
+             th:attr="data-id=${profile.id}, data-date=${profile.lastPhysicalDate != null ? #temporals.format(profile.lastPhysicalDate, 'yyyy-MM-dd') : '1970-01-01'}"
+             onclick="showProfileDetail([[${profile.id}]])">
+            <div class="card-header">
+                <div class="card-title">
+                    <div class="card-icon">
+                        <i class="fas fa-file-medical-alt"></i>
+                    </div>
+                    <div class="card-info">
+                        <h4 th:text="'档案编号: HP-' + ${profile.id}">档案编号: HP-1</h4>
+                        <p>
+                            <i class="far fa-calendar-alt me-1"></i>
+                            <span th:text="${profile.lastPhysicalDate != null ? #temporals.format(profile.lastPhysicalDate, 'yyyy年MM月dd日') : '未记录建档时间'}"></span>
+                        </p>
+                    </div>
+                </div>
+                <span class="card-badge">
+                    <i class="fas fa-calendar-alt"></i>
+                    <span th:text="${profile.lastPhysicalDate != null ? #temporals.format(profile.lastPhysicalDate, 'yyyy') : '未知年份'}"></span>年度
+                </span>
+            </div>
+
+            <div class="health-metrics">
+                <div class="metric-item" th:if="${profile.height != null}">
+                    <div class="metric-icon">
+                        <i class="fas fa-ruler-vertical"></i>
+                    </div>
+                    <div>
+                        <p class="metric-value" th:text="${#numbers.formatDecimal(profile.height, 1, 1)} + ' cm'">0.0 cm</p>
+                        <p class="metric-label">身高</p>
+                    </div>
+                </div>
+                <div class="metric-item" th:if="${profile.weight != null}">
+                    <div class="metric-icon">
+                        <i class="fas fa-weight"></i>
+                    </div>
+                    <div>
+                        <p class="metric-value" th:text="${#numbers.formatDecimal(profile.weight, 1, 1)} + ' kg'">0.0 kg</p>
+                        <p class="metric-label">体重</p>
+                    </div>
+                </div>
+                <div class="metric-item" th:if="${profile.bmi != null}">
+                    <div class="metric-icon">
+                        <i class="fas fa-calculator"></i>
+                    </div>
+                    <div>
+                        <p class="metric-value" th:text="${#numbers.formatDecimal(profile.bmi, 1, 1)}">0.0</p>
+                        <p class="metric-label">BMI指数</p>
+                    </div>
+                </div>
+                <div class="metric-item" th:if="${profile.bloodPressure != null}">
+                    <div class="metric-icon">
+                        <i class="fas fa-heartbeat"></i>
+                    </div>
+                    <div>
+                        <p class="metric-value" th:text="${profile.bloodPressure}">--/--</p>
+                        <p class="metric-label">血压</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="health-status">
+                <span th:classappend="${profile.bmi != null} ?
+                    (${profile.bmi >= 18.5 && profile.bmi < 24} ? 'status-badge status-normal' : 'status-badge status-warning') :
+                    'status-badge status-alert'">
+                    <i th:classappend="${profile.bmi != null} ?
+                        (${profile.bmi >= 18.5 && profile.bmi < 24} ? 'fas fa-check-circle' : 'fas fa-exclamation-circle') :
+                        'fas fa-question-circle'"></i>
+                    <span th:if="${profile.bmi != null}" th:switch="${profile.bmi != null}">
+                        <span th:case="${profile.bmi < 18.5}">体重偏瘦</span>
+                        <span th:case="${profile.bmi < 24}">健康状态良好</span>
+                        <span th:case="${profile.bmi < 28}">体重超重</span>
+                        <span th:case="*">体重肥胖</span>
+                    </span>
+                    <span th:unless="${profile.bmi != null}">未完成评估</span>
+                </span>
+            </div>
+
+            <div class="card-footer">
+                <div th:if="${profile != null and (profile.medicalHistory != null or profile.allergies != null)}">
+                    <p class="mb-0 text-muted" style="font-size: 0.85rem;">
+                        <i class="fas fa-info-circle me-1"></i>
+                        <span th:if="${profile?.medicalHistory != null}" th:text="'病史: ' + ${profile.medicalHistory}"></span>
+                        <span th:if="${profile?.allergies != null}" th:text="'过敏: ' + ${profile.allergies}"></span>
+                    </p>
+                </div>
+                <a href="#" class="view-details" onclick="event.stopPropagation(); showProfileDetail([[${profile.id}]])">
+                    查看详情 <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+
+        <!-- 空状态 -->
+        <div class="empty-state animate-in" th:if="${profileList == null || profileList.isEmpty()}">
+            <div class="empty-icon">
+                <i class="fas fa-file-medical-alt"></i>
+            </div>
+            <h3 class="empty-title">暂无健康档案记录</h3>
+            <p class="empty-description">
+                您还没有创建任何健康档案记录。请联系医生或管理员为您创建健康档案，或前往体检中心进行首次体检。
+            </p>
+            <button class="btn-action" onclick="location.href='/patient/appointments/book'">
+                <i class="fas fa-calendar-plus"></i>预约体检
+            </button>
+        </div>
+    </div>
+</div>
+
+
+<!-- 档案详情弹窗 -->
+<div class="modal fade" id="profileDetailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-detail">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-file-medical-alt"></i>健康档案详情
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="profileDetailContent">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                        <span class="visually-hidden">加载中...</span>
+                    </div>
+                    <p class="mt-3 text-muted">正在加载档案详情...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 引入AOS动画库 -->
+<script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+<!-- 引入Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    // 初始化AOS动画
+    AOS.init({
+        duration: 800,
+        once: true,
+        offset: 100
+    });
+
+    $(document).ready(function() {
+        console.log('健康档案管理页面加载完成');
+
+        // 计算健康档案统计信息
+        calculateHealthStats();
+
+        // 初始应用筛选
+        applyFiltersAndSort();
+
+        // 绑定筛选和排序事件
+        $('#sortBy, #filterBy').change(applyFiltersAndSort);
+        $('#searchInput').on('input', applyFiltersAndSort);
+
+        // 为档案卡片添加点击效果
+        $('.profile-card').on('click', function() {
+            $(this).css({
+                'transform': 'translateY(-3px)',
+                'box-shadow': 'var(--shadow-hover)'
+            });
+            setTimeout(() => {
+                $(this).css({
+                    'transform': 'translateY(-5px)',
+                    'box-shadow': 'var(--shadow-hover)'
+                });
+            }, 150);
+        });
+
+        // 初始化卡片动画延迟
+        $('.profile-card').each(function(index) {
+            $(this).css('animation-delay', `${index * 0.05}s`);
+        });
+    });
+
+    // 显示档案详情弹窗
+    function showProfileDetail(profileId) {
+        console.log('查看档案详情，ID:', profileId);
+
+        // 显示加载状态
+        $('#profileDetailContent').html(`
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                    <span class="visually-hidden">加载中...</span>
+                </div>
+                <p class="mt-3 text-muted">正在加载档案详情...</p>
+            </div>
+        `);
+
+        // 打开弹窗
+        const modal = new bootstrap.Modal(document.getElementById('profileDetailModal'));
+        modal.show();
+
+        // 通过AJAX获取档案详情
+        $.ajax({
+            url: '/patient/health-profile/detail/' + profileId,
+            type: 'GET',
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    renderProfileDetail(response.profile);
+                } else {
+                    showError('加载失败', response.msg || '无法加载档案详情');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('加载详情失败:', error);
+                showError('网络错误', '无法连接到服务器，请检查网络后重试');
+            }
+        });
+    }
+
+    // 渲染档案详情
+    function renderProfileDetail(profile) {
+        console.log('渲染档案详情:', profile);
+
+        const detailHtml = `
+            <div class="detail-section">
+                <h3 class="section-title">
+                    <i class="fas fa-info-circle"></i>基本信息
+                </h3>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <div class="detail-label">档案编号</div>
+                        <p class="detail-value">HP-${profile.id || 'N/A'}</p>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">建档日期</div>
+                        <p class="detail-value">${profile.lastPhysicalDate || '未记录'}</p>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">档案类型</div>
+                        <p class="detail-value">${getProfileType(profile)}</p>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">健康状况</div>
+                        <p class="detail-value">${profile.healthStatus || '未评估'}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="detail-section">
+                <h3 class="section-title">
+                    <i class="fas fa-user-md"></i>体征信息
+                </h3>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <div class="detail-label">身高</div>
+                        <p class="detail-value">${profile.height || '未记录'}</p>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">体重</div>
+                        <p class="detail-value">${profile.weight || '未记录'}</p>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">BMI指数</div>
+                        <p class="detail-value">${profile.bmi || '未计算'}</p>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">血压</div>
+                        <p class="detail-value">${profile.bloodPressure || '未记录'}</p>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">心率</div>
+                        <p class="detail-value">${profile.heartRate || '未记录'}</p>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">血型</div>
+                        <p class="detail-value">${profile.bloodType || '未记录'}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="detail-section">
+                <h3 class="section-title">
+                    <i class="fas fa-history"></i>病史信息
+                </h3>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <div class="detail-label">家族疾病史</div>
+                        <p class="detail-value">${profile.familyMedicalHistory || '无'}</p>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">既往病史</div>
+                        <p class="detail-value">${profile.medicalHistory || '无'}</p>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">过敏史</div>
+                        <p class="detail-value">${profile.allergies || '无'}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="detail-section">
+                <h3 class="section-title">
+                    <i class="fas fa-heartbeat"></i>生活习惯
+                </h3>
+                <div class="detail-item">
+                    <div class="detail-label">生活习惯记录</div>
+                    <p class="detail-value">${profile.lifestyleHabits || '无记录'}</p>
+                </div>
+            </div>
+        `;
+
+        // 添加健康建议
+        let tipsHtml = '';
+        if (profile.healthTips && profile.healthTips.length > 0) {
+            tipsHtml = generateHealthTipsHtml(profile.healthTips);
+        }
+
+        $('#profileDetailContent').html(detailHtml + tipsHtml);
+    }
+
+    // 生成健康建议HTML
+    function generateHealthTipsHtml(healthTips) {
+        let tipsHtml = `
+            <div class="detail-section">
+                <h3 class="section-title">
+                    <i class="fas fa-lightbulb"></i>健康建议
+                </h3>
+                <div class="health-tips">
+        `;
+
+        const tipsArray = Array.isArray(healthTips) ? healthTips :
+            (typeof healthTips === 'string' ? healthTips.split(',') : []);
+
+        tipsArray.forEach(tip => {
+            if (tip && tip.trim()) {
+                tipsHtml += `
+                    <div class="tip-item">
+                        <i class="fas fa-check-circle"></i>
+                        <span>${tip.trim()}</span>
+                    </div>
+                `;
+            }
+        });
+
+        tipsHtml += `
+                </div>
+            </div>
+        `;
+        return tipsHtml;
+    }
+
+    // 获取档案类型
+    function getProfileType(profile) {
+        if (profile.lastPhysicalDate) {
+            const date = new Date(profile.lastPhysicalDate);
+            const month = date.getMonth() + 1;
+            if (month >= 1 && month <= 3) return '第一季度体检';
+            if (month >= 4 && month <= 6) return '第二季度体检';
+            if (month >= 7 && month <= 9) return '第三季度体检';
+            return '第四季度体检';
+        }
+        return '年度体检档案';
+    }
+
+    // 显示错误信息
+    function showError(title, message) {
+        $('#profileDetailContent').html(`
+            <div class="alert alert-danger rounded-10 p-4">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-exclamation-circle me-3 fs-4"></i>
+                    <div>
+                        <h6 class="alert-heading mb-1">${title}</h6>
+                        <p class="mb-0">${message}</p>
+                    </div>
+                </div>
+            </div>
+        `);
+    }
+
+    // 计算健康档案统计信息
+    function calculateHealthStats() {
+        let normalCount = 0;
+        let warningCount = 0;
+
+        $('.profile-card').each(function() {
+            const $statusBadge = $(this).find('.status-badge');
+            if ($statusBadge.hasClass('status-normal')) {
+                normalCount++;
+            } else if ($statusBadge.hasClass('status-warning') || $statusBadge.hasClass('status-alert')) {
+                warningCount++;
+            }
+        });
+
+        $('#normalCount').text(normalCount);
+        $('#warningCount').text(warningCount);
+    }
+
+    // 应用筛选和排序
+    function applyFiltersAndSort() {
+        const sortBy = $('#sortBy').val();
+        const filterBy = $('#filterBy').val();
+        const searchText = $('#searchInput').val().toLowerCase();
+
+        $('.profile-card').each(function() {
+            const $card = $(this);
+            const cardId = $card.data('id')?.toString() || '';
+            const cardDate = $card.data('date');
+            const cardText = $card.text().toLowerCase();
+            const statusClass = $card.find('.status-badge').attr('class');
+            let showCard = true;
+
+            // 应用搜索筛选
+            if (searchText) {
+                showCard = cardText.includes(searchText) || cardId.includes(searchText);
+            }
+
+            // 应用状态筛选
+            if (showCard && filterBy !== 'all') {
+                if (filterBy === 'recent') {
+                    if (cardDate) {
+                        const cardDateTime = new Date(cardDate);
+                        const oneYearAgo = new Date();
+                        oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+                        showCard = cardDateTime >= oneYearAgo;
+                    }
+                } else if (filterBy === 'normal') {
+                    showCard = statusClass?.includes('status-normal');
+                } else if (filterBy === 'warning') {
+                    showCard = statusClass?.includes('status-warning') || statusClass?.includes('status-alert');
+                }
+            }
+
+            $card.toggle(showCard);
+        });
+
+        // 应用排序
+        sortCards(sortBy);
+
+        // 重新计算统计信息
+        calculateHealthStats();
+
+        // 更新动画延迟
+        $('.profile-card:visible').each(function(index) {
+            $(this).css('animation-delay', `${index * 0.05}s`);
+        });
+    }
+
+    // 排序卡片
+    function sortCards(sortBy) {
+        const $container = $('.profile-list-container');
+        const $cards = $container.find('.profile-card:visible').detach().toArray();
+
+        $cards.sort(function(a, b) {
+            const $a = $(a);
+            const $b = $(b);
+
+            if (sortBy.includes('date')) {
+                const dateA = new Date($a.data('date') || 0);
+                const dateB = new Date($b.data('date') || 0);
+                return sortBy === 'date_desc' ? dateB - dateA : dateA - dateB;
+            } else if (sortBy.includes('id')) {
+                const idA = $a.data('id') || 0;
+                const idB = $b.data('id') || 0;
+                return sortBy === 'id_desc' ? idB - idA : idA - idB;
+            }
+            return 0;
+        });
+
+        $container.append($cards);
+    }
+
+    // 导出健康数据
+    function exportHealthData() {
+        console.log('导出健康数据');
+        // 这里可以实现导出功能
+        alert('导出功能开发中...');
+    }
+</script>
+</body>
+</html>

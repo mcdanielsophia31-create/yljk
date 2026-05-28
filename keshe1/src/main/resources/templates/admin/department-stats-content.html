@@ -1,0 +1,202 @@
+<div class="container-fluid">
+    <div class="dashboard-header">
+        <div>
+            <h1>科室统计</h1>
+            <p>按科室统计医生数量，并查看与调整医生归属</p>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-outline-custom" onclick="location.href='/admin/profile'">
+                <i class="fas fa-cog"></i> 设置
+            </button>
+            <button class="btn btn-primary-custom" onclick="location.href='/logout'">
+                <i class="fas fa-sign-out-alt"></i> 退出
+            </button>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="card p-3">
+                <h5 class="mb-3"><i class="fas fa-chart-pie me-2"></i>科室医生数量扇形图</h5>
+                <canvas id="deptStatsChart" height="240"></canvas>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card p-3">
+                <h5 class="mb-3"><i class="fas fa-hospital me-2"></i>科室列表</h5>
+                <div id="deptListForDoctors" class="list-group"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="deptDoctorsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deptDoctorsModalTitle">科室医生列表</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="deptDoctorsContainer">
+                        <div class="text-muted">加载中...</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window.loadDepartmentStats = function () {
+            const canvas = document.getElementById('deptStatsChart');
+            if (!canvas) return;
+            fetch('/admin/departments/stats')
+                .then(r => r.ok ? r.json() : Promise.reject('统计加载失败'))
+                .then(stats => {
+                    const labels = stats.map(s => s.departmentName);
+                    const data = stats.map(s => s.doctorCount);
+                    const total = data.reduce((sum, v) => sum + (v || 0), 0);
+                    if (total === 0) {
+                        const parent = canvas.parentElement;
+                        const placeholder = document.createElement('div');
+                        placeholder.className = 'text-muted text-center';
+                        placeholder.style.padding = '40px 0';
+                        placeholder.textContent = '暂无医生数据';
+                        parent.innerHTML = '';
+                        parent.appendChild(placeholder);
+                        return;
+                    }
+                    if (window.deptChartInstance) {
+                        window.deptChartInstance.data.labels = labels;
+                        window.deptChartInstance.data.datasets[0].data = data;
+                        window.deptChartInstance.update();
+                        return;
+                    }
+                    const ctx = canvas.getContext('2d');
+                    window.deptChartInstance = new Chart(ctx, {
+                        type: 'pie',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                data: data,
+                                backgroundColor: ['#5B8FF9', '#61DDAA', '#65789B', '#F6BD16', '#7262FD', '#78D3F8', '#9661BC', '#F6903D']
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                legend: { position: 'bottom' }
+                            }
+                        }
+                    });
+                })
+                .catch(e => console.error(e));
+        };
+
+        window.loadDepartmentButtons = function () {
+            const container = document.getElementById('deptListForDoctors');
+            container.innerHTML = '<div class="text-muted">加载中...</div>';
+            fetch('/admin/departments/stats')
+                .then(r => r.ok ? r.json() : Promise.reject('科室加载失败'))
+                .then(stats => {
+                    container.innerHTML = '';
+                    if (!stats || stats.length === 0) {
+                        container.innerHTML = '<div class="text-muted">暂无科室</div>';
+                        return;
+                    }
+                    const total = stats.reduce((sum, s) => sum + (s.doctorCount || 0), 0) || 1;
+                    stats.forEach(s => {
+                        const percent = ((s.doctorCount || 0) * 100 / total).toFixed(1);
+                        const item = document.createElement('a');
+                        item.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center';
+                        item.innerHTML = `
+                            <span><i class="fas fa-hospital me-2"></i>${s.departmentName}</span>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-primary rounded-pill">${s.doctorCount || 0} 人（${percent}%）</span>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="window.openDepartmentDoctorsModal(${s.departmentId}, '${s.departmentName}')">查看医生</button>
+                            </div>
+                        `;
+                        container.appendChild(item);
+                    });
+                })
+                .catch(e => {
+                    container.innerHTML = '<div class="text-danger">加载失败</div>';
+                });
+        };
+
+        window.openDepartmentDoctorsModal = function (deptId, deptName) {
+            const titleEl = document.getElementById('deptDoctorsModalTitle');
+            const container = document.getElementById('deptDoctorsContainer');
+            titleEl.textContent = '科室医生列表 - ' + (deptName || ('ID ' + deptId));
+            container.innerHTML = '<div class="text-muted">加载中...</div>';
+            fetch('/admin/departments/' + deptId + '/doctors')
+                .then(r => r.ok ? r.json() : Promise.reject('加载失败'))
+                .then(list => {
+                    fetch('/admin/departments/list')
+                        .then(r => r.ok ? r.json() : Promise.reject('加载失败'))
+                        .then(depts => {
+                            const deptOptions = depts.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+                            const html = `
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>医生ID</th>
+                                            <th>姓名</th>
+                                            <th>职称</th>
+                                            <th>专长</th>
+                                            <th>调整科室</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${list.map(doc => `
+                                            <tr>
+                                                <td>${doc.id}</td>
+                                                <td>${doc.name || '-'}</td>
+                                                <td>${doc.title || '-'}</td>
+                                                <td>${doc.specialty || '-'}</td>
+                                                <td>
+                                                    <div class="input-group">
+                                                        <select class="form-select" id="moveDeptSelect_${doc.id}">
+                                                            ${deptOptions}
+                                                        </select>
+                                                        <button class="btn btn-outline-primary" onclick="window.moveDoctor(${doc.id})">调整</button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            `;
+                            container.innerHTML = html;
+                            new bootstrap.Modal(document.getElementById('deptDoctorsModal')).show();
+                        });
+                })
+                .catch(e => alert(e));
+        };
+
+        window.moveDoctor = function (doctorId) {
+            const sel = document.getElementById('moveDeptSelect_' + doctorId);
+            const targetId = sel ? Number(sel.value) : null;
+            if (!targetId) return;
+            fetch('/admin/departments/move-doctor', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'doctorId=' + encodeURIComponent(doctorId) + '&targetDepartmentId=' + encodeURIComponent(targetId)
+            })
+                .then(r => r.text())
+                .then(msg => {
+                    window.loadDepartmentStats();
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('deptDoctorsModal'));
+                    if (modal) modal.hide();
+                })
+                .catch(e => alert('调整失败: ' + e));
+        };
+
+        document.addEventListener('DOMContentLoaded', function () {
+            window.loadDepartmentStats();
+            window.loadDepartmentButtons();
+        });
+    </script>
+</div>

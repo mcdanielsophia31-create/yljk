@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>患者疾病分析 - 医疗健康管理系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/luxon@3.3.0/build/global/luxon.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.3.0/dist/chartjs-adapter-luxon.min.js"></script>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', 'Segoe UI', Arial, sans-serif;
+            background-color: #F5F7FA;
+            padding: 20px;
+        }
+        .analysis-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+            margin-bottom: 24px;
+            padding: 28px;
+        }
+        .chart-container {
+            position: relative;
+            height: 500px;
+            margin-top: 20px;
+        }
+        .filter-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            text-align: center;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+            border: none;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+        }
+        .stat-card i {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+        }
+        .stat-card h3 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin: 10px 0;
+        }
+        .stat-card p {
+            color: #6c757d;
+            font-size: 0.95rem;
+            margin-bottom: 0;
+        }
+        .table-container {
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 20px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        .table thead th {
+            background-color: #f8f9fa;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            border-bottom: 2px solid #dee2e6;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #4F46E5;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+<div class="analysis-card">
+    <div class="header-actions mb-4">
+        <div>
+            <h2><i class="fas fa-search-medical me-2"></i>患者疾病病因分析</h2>
+            <p class="text-muted">查看本医院所有患者的诊断病因趋势分布</p>
+        </div>
+        <div>
+            <button class="btn btn-outline-primary" onclick="location.href='/admin/dashboard'">
+                <i class="fas fa-arrow-left me-1"></i>返回仪表板
+            </button>
+        </div>
+    </div>
+
+    <!-- 筛选条件 -->
+    <div class="filter-card">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label fw-semibold"><i class="fas fa-calendar-alt me-2"></i>时间范围</label>
+                <select class="form-select" id="timeRange">
+                    <option value="3">最近3个月</option>
+                    <option value="6">最近6个月</option>
+                    <option value="12" selected>最近12个月</option>
+                    <option value="24">最近24个月</option>
+                    <option value="36">最近36个月</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label fw-semibold"><i class="fas fa-filter me-2"></i>疾病筛选</label>
+                <select class="form-select" id="diseaseFilter">
+                    <option value="">所有疾病</option>
+                    <!-- 动态加载 -->
+                </select>
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+                <button class="btn btn-primary w-100 py-2" onclick="loadDiseaseCauseData()">
+                    <i class="fas fa-search me-1"></i>查询分析
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 统计信息卡片 -->
+    <div class="row g-4 mb-4" id="statisticsCards">
+        <!-- 动态加载统计信息 -->
+    </div>
+
+    <!-- 加载中提示 -->
+    <div class="loading" id="loadingIndicator">
+        <div class="loading-spinner"></div>
+        <p class="text-muted mt-2">正在加载数据，请稍候...</p>
+    </div>
+
+    <!-- 图表展示 -->
+    <div class="row" id="chartSection" style="display: none;">
+        <div class="col-md-12">
+            <div class="analysis-card">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h4><i class="fas fa-chart-bar me-2"></i>疾病病因趋势柱状图</h4>
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="exportChartData()">
+                            <i class="fas fa-download me-1"></i>导出数据
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="toggleChartType()">
+                            <i class="fas fa-exchange-alt me-1"></i>切换视图
+                        </button>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="diseaseCauseChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 数据表格 -->
+    <div class="row mt-4" id="tableSection" style="display: none;">
+        <div class="col-md-12">
+            <div class="analysis-card">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4><i class="fas fa-table me-2"></i>详细数据</h4>
+                    <span class="badge bg-primary" id="tableCount">0 条记录</span>
+                </div>
+                <div class="table-container">
+                    <table class="table table-hover table-striped" id="diseaseTable">
+                        <thead>
+                        <tr>
+                            <th>月份</th>
+                            <th>疾病名称</th>
+                            <th>患者数量</th>
+                            <th>诊断次数</th>
+                            <th>患者占比</th>
+                            <th>诊断占比</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <!-- 动态加载数据 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 无数据提示 -->
+    <div class="analysis-card text-center" id="noDataSection" style="display: none;">
+        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+        <h4 class="text-muted">暂无诊断数据</h4>
+        <p class="text-muted">当前时间段内没有找到诊断记录</p>
+        <button class="btn btn-outline-primary mt-2" onclick="loadDiseaseCauseData()">
+            <i class="fas fa-sync-alt me-1"></i>重新加载
+        </button>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    let diseaseCauseChart = null;
+    let chartType = 'bar'; // 默认柱状图
+    let currentData = [];
+
+    // 页面加载完成时初始化
+    document.addEventListener('DOMContentLoaded', function() {
+        loadDiseaseCauseData();
+    });
+
+    // 显示加载中
+    function showLoading() {
+        document.getElementById('loadingIndicator').style.display = 'block';
+        document.getElementById('chartSection').style.display = 'none';
+        document.getElementById('tableSection').style.display = 'none';
+        document.getElementById('noDataSection').style.display = 'none';
+    }
+
+    // 隐藏加载中
+    function hideLoading() {
+        document.getElementById('loadingIndicator').style.display = 'none';
+    }
+
+    // 加载疾病病因数据
+    function loadDiseaseCauseData() {
+        showLoading();
+
+        const timeRange = document.getElementById('timeRange').value;
+
+        fetch(`/api/patient-analysis/disease-cause-trend?timeRange=${timeRange}`)
+            .then(response => response.json())
+            .then(data => {
+                hideLoading();
+                if (data.success) {
+                    console.log('获取到的疾病病因数据:', data);
+                    currentData = data.data || [];
+                    renderStatistics(data);
+                    if (currentData.length > 0) {
+                        renderChart(currentData);
+                        renderTable(currentData);
+                        updateDiseaseFilter(currentData);
+                        document.getElementById('chartSection').style.display = 'block';
+                        document.getElementById('tableSection').style.display = 'block';
+                        document.getElementById('noDataSection').style.display = 'none';
+                    } else {
+                        document.getElementById('chartSection').style.display = 'none';
+                        document.getElementById('tableSection').style.display = 'none';
+                        document.getElementById('noDataSection').style.display = 'block';
+                    }
+                } else {
+                    alert('获取数据失败: ' + data.error);
+                    document.getElementById('noDataSection').style.display = 'block';
+                }
+            })
+            .catch(error => {
+                hideLoading();
+                console.error('请求失败:', error);
+                alert('请求失败: ' + error.message);
+                document.getElementById('noDataSection').style.display = 'block';
+            });
+    }
+
+    // 渲染统计信息
+    function renderStatistics(data) {
+        const statsContainer = document.getElementById('statisticsCards');
+        const totalPatients = data.totalPatients || 0;
+        const totalDiagnoses = data.totalDiagnoses || 0;
+        const avgPerPatient = totalPatients > 0 ? (totalDiagnoses / totalPatients).toFixed(1) : 0;
+        const uniqueDiseases = getUniqueDiseasesCount(data.data);
+
+        statsContainer.innerHTML = `
+            <div class="col-md-3">
+                <div class="stat-card bg-primary bg-gradient text-white">
+                    <i class="fas fa-hospital-user"></i>
+                    <h3>${totalPatients}</h3>
+                    <p>患者总数</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card bg-success bg-gradient text-white">
+                    <i class="fas fa-file-medical"></i>
+                    <h3>${totalDiagnoses}</h3>
+                    <p>诊断总数</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card bg-warning bg-gradient text-white">
+                    <i class="fas fa-chart-line"></i>
+                    <h3>${avgPerPatient}</h3>
+                    <p>人均诊断次数</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card bg-info bg-gradient text-white">
+                    <i class="fas fa-heartbeat"></i>
+                    <h3>${uniqueDiseases}</h3>
+                    <p>疾病类型数</p>
+                </div>
+            </div>
+        `;
+    }
+
+    // 渲染图表
+    function renderChart(data) {
+        const ctx = document.getElementById('diseaseCauseChart').getContext('2d');
+
+        // 如果图表已存在，先销毁
+        if (diseaseCauseChart) {
+            diseaseCauseChart.destroy();
+        }
+
+        // 处理数据：按疾病分组
+        const processedData = processChartData(data);
+
+        // 获取颜色
+        const colors = generateChartColors(processedData.diseases.length);
+
+        // 创建数据集
+        const datasets = processedData.diseases.map((disease, index) => {
+            return {
+                label: disease,
+                data: processedData.months.map(month => {
+                    return processedData.data[month]?.[disease] || 0;
+                }),
+                backgroundColor: chartType === 'bar' ? colors[index] : 'transparent',
+                borderColor: colors[index],
+                borderWidth: chartType === 'bar' ? 1 : 2,
+                fill: chartType === 'line',
+                tension: 0.4
+            };
+        });
+
+        // 创建图表
+        diseaseCauseChart = new Chart(ctx, {
+            type: chartType,
+            data: {
+                labels: processedData.months,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: `疾病病因趋势分析 (${processedData.months.length}个月)`,
+                        font: {
+                            size: 16,
+                            weight: 'bold'
+                        }
+                    },
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            usePointStyle: true,
+                            padding: 20
+                        }
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false
+                    }
+                },
+                scales: {
+                    x: {
+                        display: true,
+                        title: {
+                            display: true,
+                            text: '月份',
+                            font: {
+                                size: 14,
+                                weight: 'bold'
+                            }
+                        },
+                        grid: {
+                            display: true,
+                            drawBorder: true
+                        }
+                    },
+                    y: {
+                        display: true,
+                        title: {
+                            display: true,
+                            text: '患者数量',
+                            font: {
+                                size: 14,
+                                weight: 'bold'
+                            }
+                        },
+                        beginAtZero: true,
+                        grid: {
+                            display: true,
+                            drawBorder: true
+                        }
+                    }
+                },
+                interaction: {
+                    intersect: false,
+                    mode: 'nearest'
+                },
+                animation: {
+                    duration: 1000,
+                    easing: 'easeOutQuart'
+                }
+            }
+        });
+    }
+
+    // 处理图表数据
+    function processChartData(data) {
+        const result = {
+            months: [],
+            diseases: [],
+            data: {}
+        };
+
+        // 收集所有月份和疾病
+        const monthSet = new Set();
+        const diseaseSet = new Set();
+
+        data.forEach(item => {
+            monthSet.add(item.month);
+            diseaseSet.add(item.diseaseName);
+        });
+
+        result.months = Array.from(monthSet).sort();
+        result.diseases = Array.from(diseaseSet);
+
+        // 初始化数据结构
+        result.months.forEach(month => {
+            result.data[month] = {};
+            result.diseases.forEach(disease => {
+                result.data[month][disease] = 0;
+            });
+        });
+
+        // 填充数据
+        data.forEach(item => {
+            if (result.data[item.month]) {
+                result.data[item.month][item.diseaseName] = item.patientCount || 0;
+            }
+        });
+
+        return result;
+    }
+
+    // 渲染表格
+    function renderTable(data) {
+        const tableBody = document.querySelector('#diseaseTable tbody');
+        const tableCount = document.getElementById('tableCount');
+
+        if (!data || data.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="6" class="text-center">暂无数据</td></tr>';
+            tableCount.textContent = '0 条记录';
+            return;
+        }
+
+        // 计算总计
+        const totalPatients = data.reduce((sum, item) => sum + (item.patientCount || 0), 0);
+        const totalDiagnoses = data.reduce((sum, item) => sum + (item.diagnosisCount || 0), 0);
+
+        let html = '';
+        data.forEach(item => {
+            const patientPercent = totalPatients > 0 ? ((item.patientCount || 0) / totalPatients * 100).toFixed(1) : 0;
+            const diagnosisPercent = totalDiagnoses > 0 ? ((item.diagnosisCount || 0) / totalDiagnoses * 100).toFixed(1) : 0;
+
+            html += `
+                <tr>
+                    <td>${item.month}</td>
+                    <td><strong>${item.diseaseName}</strong></td>
+                    <td><span class="badge bg-primary rounded-pill">${item.patientCount || 0}</span></td>
+                    <td><span class="badge bg-info rounded-pill">${item.diagnosisCount || 0}</span></td>
+                    <td>
+                        <div class="progress" style="height: 8px;">
+                            <div class="progress-bar bg-success" role="progressbar"
+                                 style="width: ${patientPercent}%"
+                                 aria-valuenow="${patientPercent}"
+                                 aria-valuemin="0"
+                                 aria-valuemax="100"></div>
+                        </div>
+                        <small class="text-muted">${patientPercent}%</small>
+                    </td>
+                    <td>
+                        <div class="progress" style="height: 8px;">
+                            <div class="progress-bar bg-warning" role="progressbar"
+                                 style="width: ${diagnosisPercent}%"
+                                 aria-valuenow="${diagnosisPercent}"
+                                 aria-valuemin="0"
+                                 aria-valuemax="100"></div>
+                        </div>
+                        <small class="text-muted">${diagnosisPercent}%</small>
+                    </td>
+                </tr>
+            `;
+        });
+
+        tableBody.innerHTML = html;
+        tableCount.textContent = `${data.length} 条记录`;
+    }
+
+    // 更新疾病筛选器
+    function updateDiseaseFilter(data) {
+        const diseaseFilter = document.getElementById('diseaseFilter');
+        const uniqueDiseases = [...new Set(data.map(item => item.diseaseName))];
+
+        let options = '<option value="">所有疾病</option>';
+        uniqueDiseases.forEach(disease => {
+            options += `<option value="${disease}">${disease}</option>`;
+        });
+
+        diseaseFilter.innerHTML = options;
+
+        // 添加筛选事件监听
+        diseaseFilter.onchange = function() {
+            const selectedDisease = this.value;
+            if (selectedDisease) {
+                const filteredData = currentData.filter(item => item.diseaseName === selectedDisease);
+                if (filteredData.length > 0) {
+                    renderChart(filteredData);
+                    renderTable(filteredData);
+                }
+            } else {
+                renderChart(currentData);
+                renderTable(currentData);
+            }
+        };
+    }
+
+    // 切换图表类型
+    function toggleChartType() {
+        chartType = chartType === 'bar' ? 'line' : 'bar';
+        if (diseaseCauseChart && currentData.length > 0) {
+            renderChart(currentData);
+        }
+    }
+
+    // 导出数据
+    function exportChartData() {
+        if (!currentData || currentData.length === 0) {
+            alert('没有数据可以导出');
+            return;
+        }
+
+        // 创建CSV内容
+        let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
+        csvContent += "月份,疾病名称,患者数量,诊断次数\n";
+
+        currentData.forEach(item => {
+            const row = [
+                item.month,
+                item.diseaseName,
+                item.patientCount || 0,
+                item.diagnosisCount || 0
+            ].join(',');
+            csvContent += row + "\n";
+        });
+
+        // 创建下载链接
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `疾病病因分析_${new Date().toLocaleDateString()}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    // 生成图表颜色
+    function generateChartColors(count) {
+        const colors = [
+            '#4F46E5', '#7C3AED', '#2563EB', '#059669', '#10B981',
+            '#D97706', '#F59E0B', '#DC2626', '#EF4444', '#DB2777',
+            '#BE185D', '#0D9488', '#0891B2', '#0369A1', '#1D4ED8',
+            '#3730A3', '#6B21A8', '#86198F', '#9D174D', '#7F1D1D'
+        ];
+
+        if (count <= colors.length) {
+            return colors.slice(0, count);
+        }
+
+        // 如果需要更多颜色，动态生成
+        const generatedColors = [];
+        for (let i = 0; i < count; i++) {
+            const hue = (i * 137.508) % 360; // 使用黄金角近似
+            generatedColors.push(`hsl(${hue}, 70%, 60%)`);
+        }
+        return generatedColors;
+    }
+
+    // 获取唯一疾病数量
+    function getUniqueDiseasesCount(data) {
+        if (!data) return 0;
+        return [...new Set(data.map(item => item.diseaseName))].length;
+    }
+</script>
+</body>
+</html>

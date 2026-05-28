@@ -1,0 +1,1602 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>医生信息管理 - 医疗健康管理系统</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <!-- 统一样式 -->
+    <link rel="stylesheet" th:href="@{/css/unified-style.css}">
+
+    <style>
+        /* 医生个人信息页面专用样式 */
+        body {
+            background-color: #F5F7FA;
+            font-family: 'Microsoft YaHei', 'Segoe UI', Arial, sans-serif;
+            padding: 0;
+            margin: 0;
+        }
+
+        .main-content {
+            margin-left: 250px;
+            padding: 20px;
+            transition: margin-left 0.3s;
+        }
+
+        .main-content.full-width {
+            margin-left: 70px;
+        }
+
+        .page-header {
+            background: linear-gradient(135deg, #36B37E 0%, #00A3BF 100%);
+            color: white;
+            padding: 25px 30px;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(54, 179, 126, 0.15);
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .page-header h1 {
+            font-weight: 700;
+            margin-bottom: 5px;
+            font-size: 28px;
+        }
+
+        .page-header p {
+            opacity: 0.9;
+            font-size: 14px;
+            margin: 0;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        /* 卡片样式 */
+        .card {
+            border: none;
+            border-radius: 16px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+            margin-bottom: 25px;
+            overflow: hidden;
+        }
+
+        .card-header {
+            background: white;
+            border-bottom: 2px solid #E6F4FF;
+            padding: 20px 30px;
+        }
+
+        .card-header h5 {
+            margin: 0;
+            color: #1A1A1A;
+            font-weight: 600;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+        }
+
+        .card-body {
+            padding: 30px;
+        }
+
+        /* 头像区域样式*/
+        .avatar-section {
+            display: flex;
+            align-items: center;
+            gap: 30px;
+            margin-bottom: 20px;
+            padding: 20px;
+            background: linear-gradient(135deg, rgba(54, 179, 126, 0.05) 0%, rgba(0, 163, 191, 0.05) 100%);
+            border-radius: 16px;
+            border: 1px solid rgba(54, 179, 126, 0.1);
+        }
+
+        .avatar-container {
+            position: relative;
+            width: 120px;
+            height: 120px;
+        }
+
+        .avatar-display {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: 3px solid #36B37E;
+            overflow: hidden;
+            background: linear-gradient(135deg, #36B37E 0%, #00A3BF 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .avatar-display:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 25px rgba(54, 179, 126, 0.3);
+        }
+
+        .avatar-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+        }
+
+        .avatar-placeholder {
+            font-size: 48px;
+            font-weight: bold;
+            color: white;
+        }
+
+        .avatar-upload-btn {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #36B37E;
+            color: white;
+            border: 2px solid white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            z-index: 10;
+        }
+
+        .avatar-upload-btn:hover {
+            background: #2E9E6E;
+            transform: scale(1.1);
+        }
+
+        .avatar-info {
+            flex: 1;
+        }
+
+        .avatar-info h5 {
+            font-size: 20px;
+            font-weight: 600;
+            color: #1A1A1A;
+            margin-bottom: 8px;
+        }
+
+        .avatar-info p {
+            font-size: 14px;
+            color: #6B7280;
+            margin-bottom: 0;
+        }
+
+        /* 个人信息展示样式 */
+        .profile-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .info-item {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid #E5E7EB;
+            transition: all 0.3s;
+        }
+
+        .info-item:hover {
+            border-color: #36B37E;
+            box-shadow: 0 4px 12px rgba(54, 179, 126, 0.1);
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: #374151;
+            font-size: 14px;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .info-value {
+            color: #1F2937;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+
+        /* 按钮样式 - */
+        .btn-group {
+            margin-top: 30px;
+            display: flex;
+            gap: 15px;
+        }
+
+        .btn-primary-custom {
+            background: linear-gradient(135deg, #36B37E 0%, #00A3BF 100%);
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .btn-primary-custom:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(54, 179, 126, 0.3);
+        }
+
+        .btn-outline-custom {
+            border: 2px solid #E5E7EB;
+            color: #6B7280;
+            background: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .btn-outline-custom:hover {
+            border-color: #36B37E;
+            color: #36B37E;
+            background: #F0FDF4;
+        }
+
+        /* 模态框样式 - */
+        .profile-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .profile-modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 0;
+            width: 90%;
+            max-width: 800px;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            animation: modalFadeIn 0.3s ease-out;
+        }
+
+        @keyframes modalFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .profile-modal-header {
+            padding: 20px 30px;
+            background: linear-gradient(135deg, #36B37E 0%, #00A3BF 100%);
+            color: white;
+            border-radius: 16px 16px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .profile-modal-title {
+            font-size: 24px;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .profile-modal-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.3s;
+        }
+
+        .profile-modal-close:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .profile-modal-body {
+            padding: 30px;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+
+        .profile-form-group {
+            margin-bottom: 20px;
+        }
+
+        .profile-form-label {
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 8px;
+            font-size: 14px;
+            display: block;
+        }
+
+        .profile-form-control, .profile-form-select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #E5E7EB;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s;
+            background-color: white;
+        }
+
+        .profile-form-control:focus, .profile-form-select:focus {
+            outline: none;
+            border-color: #36B37E;
+            box-shadow: 0 0 0 3px rgba(54, 179, 126, 0.1);
+        }
+
+        .profile-form-control:disabled {
+            background-color: #F9FAFB;
+            color: #9CA3AF;
+            cursor: not-allowed;
+        }
+
+        .profile-modal-footer {
+            padding: 20px 30px;
+            background-color: #F9FAFB;
+            border-radius: 0 0 16px 16px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        .profile-modal-btn {
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: none;
+            min-width: 100px;
+        }
+
+        .profile-modal-btn-primary {
+            background: linear-gradient(135deg, #36B37E 0%, #00A3BF 100%);
+            color: white;
+        }
+
+        .profile-modal-btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(54, 179, 126, 0.3);
+        }
+
+        .profile-modal-btn-secondary {
+            background-color: #E5E7EB;
+            color: #374151;
+        }
+
+        .profile-modal-btn-secondary:hover {
+            background-color: #D1D5DB;
+        }
+
+        .profile-form-row {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .profile-form-col {
+            flex: 1;
+        }
+
+        /* 错误提示样式 */
+        .profile-error-message {
+            color: #DC2626;
+            font-size: 14px;
+            margin-top: 5px;
+            display: none;
+        }
+
+        .profile-error-message.show {
+            display: block;
+        }
+
+        /* 成功提示样式 */
+        .profile-success-message {
+            color: #059669;
+            font-size: 14px;
+            margin-top: 5px;
+            display: none;
+        }
+
+        .profile-success-message.show {
+            display: block;
+        }
+
+        /* 头像上传模态框样式 -一致 */
+        .avatar-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 3000;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .avatar-modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 0;
+            width: 90%;
+            max-width: 500px;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            animation: modalFadeIn 0.3s ease-out;
+        }
+
+        .avatar-modal-header {
+            padding: 20px 30px;
+            background: linear-gradient(135deg, #36B37E 0%, #00A3BF 100%);
+            color: white;
+            border-radius: 16px 16px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .avatar-modal-title {
+            font-size: 24px;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .avatar-modal-body {
+            padding: 30px;
+        }
+
+        .avatar-upload-area {
+            border: 2px dashed #D1D5DB;
+            border-radius: 12px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 20px;
+        }
+
+        .avatar-upload-area:hover {
+            border-color: #36B37E;
+            background-color: rgba(54, 179, 126, 0.05);
+        }
+
+        .avatar-upload-area.drag-over {
+            border-color: #36B37E;
+            background-color: rgba(54, 179, 126, 0.1);
+        }
+
+        .avatar-preview {
+            width: 150px;
+            height: 150px;
+            margin: 0 auto 20px;
+            border-radius: 50%;
+            overflow: hidden;
+            border: 3px solid #36B37E;
+            display: none;
+        }
+
+        .avatar-modal-footer {
+            padding: 20px 30px;
+            background-color: #F9FAFB;
+            border-radius: 0 0 16px 16px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        .avatar-modal-btn {
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: none;
+            min-width: 100px;
+        }
+
+        .avatar-modal-btn-primary {
+            background: linear-gradient(135deg, #36B37E 0%, #00A3BF 100%);
+            color: white;
+        }
+
+        .avatar-modal-btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(54, 179, 126, 0.3);
+        }
+
+        /* 头像上传图标和文本 */
+        .avatar-upload-icon {
+            font-size: 48px;
+            color: #9CA3AF;
+            margin-bottom: 16px;
+        }
+
+        .avatar-upload-text {
+            font-size: 16px;
+            color: #6B7280;
+            margin-bottom: 8px;
+        }
+
+        .avatar-upload-hint {
+            font-size: 14px;
+            color: #9CA3AF;
+        }
+
+        /* 头像图片样式 */
+        .avatar-img {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid #36B37E;
+        }
+
+        /* 头像变更按钮 */
+        .avatar-change-btn {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #36B37E;
+            color: white;
+            border: 2px solid white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            z-index: 10;
+        }
+
+        .avatar-change-btn:hover {
+            background: #2E9E6E;
+            transform: scale(1.1);
+        }
+
+        /* 响应式调整 */
+        @media (max-width: 768px) {
+            .main-content {
+                margin-left: 70px;
+            }
+
+            .profile-form-row {
+                flex-direction: column;
+                gap: 0;
+            }
+
+            .profile-modal-body {
+                padding: 20px;
+                max-height: 60vh;
+            }
+
+            .profile-modal-content {
+                width: 95%;
+                margin: 10% auto;
+            }
+
+            .avatar-section {
+                flex-direction: column;
+                text-align: center;
+                gap: 20px;
+            }
+
+            .avatar-container {
+                width: 100px;
+                height: 100px;
+            }
+
+            .avatar-img {
+                width: 100px;
+                height: 100px;
+            }
+
+            .page-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+
+            .header-actions {
+                width: 100%;
+                justify-content: flex-end;
+            }
+
+            .profile-info {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+<!-- 主内容区域 -->
+<div class="main-content" id="profile-container">
+    <!-- 顶部标题栏 -->
+    <div class="page-header">
+        <div>
+            <h1><i class="fas fa-user-md me-2"></i>医生信息管理</h1>
+            <p>查看和管理您的个人信息</p>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-outline-custom" onclick="location.href='/doctor/dashboard'">
+                <i class="fas fa-arrow-left"></i> 返回首页
+            </button>
+            <button class="btn btn-primary-custom" onclick="location.href='/logout'">
+                <i class="fas fa-sign-out-alt"></i> 退出
+            </button>
+        </div>
+    </div>
+
+    <!-- 头像上传区域 -->
+    <div class="card shadow-sm border-0 rounded-lg mb-4">
+        <div class="card-header bg-white border-bottom border-primary-subtle py-3">
+            <h5 class="mb-0 text-primary">
+                <i class="fas fa-user-circle me-2"></i>头像设置
+            </h5>
+        </div>
+        <div class="card-body p-4">
+            <div class="avatar-section">
+                <div class="avatar-container">
+                    <!-- 修改后的头像显示区域，使用动态加载 -->
+                    <div id="doctorAvatarDisplay" class="avatar-display" onclick="showAvatarUploadModal()">
+                        <div class="avatar-placeholder" id="doctorAvatarPlaceholder">医</div>
+                        <img id="doctorAvatarImage" class="avatar-image" style="display: none;" alt="医生头像">
+                    </div>
+                    <div class="avatar-upload-btn" onclick="showAvatarUploadModal()" title="更换头像">
+                        <i class="fas fa-camera"></i>
+                    </div>
+                </div>
+                <div class="avatar-info">
+                    <h5 id="doctorDisplayName">医生姓名</h5>
+                    <p>
+                        <span id="doctorTitle">未设置职称</span>
+                        <span id="doctorDepartment" style="display: none;"></span>
+                    </p>
+                    <p class="mt-2"><small class="text-muted">支持 JPG、PNG、GIF、WebP 格式，文件大小不超过 2MB</small></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 基本信息卡片 -->
+    <div class="card shadow-sm border-0 rounded-lg mb-4">
+        <div class="card-header bg-white border-bottom border-primary-subtle py-3">
+            <h5 class="mb-0 text-primary">
+                <i class="fas fa-user me-2"></i>基本信息
+            </h5>
+        </div>
+        <div class="card-body p-4">
+            <div class="profile-info">
+                <!-- 用户名/工号 -->
+                <div class="info-item">
+                    <label class="info-label">用户名/工号</label>
+                    <div class="info-value" id="displayUsername" th:text="${user.username}">用户名</div>
+                </div>
+
+                <!-- 姓名 -->
+                <div class="info-item">
+                    <label class="info-label">姓名</label>
+                    <div class="info-value" id="displayRealName" th:text="${user.realName}">真实姓名</div>
+                </div>
+
+                <!-- 所属医院 -->
+                <div class="info-item">
+                    <label class="info-label">所属医院</label>
+                    <div class="info-value" id="displayHospital" th:text="${hospital != null ? hospital.name : '未分配'}">未分配</div>
+                </div>
+
+                <!-- 所属科室 -->
+                <div class="info-item">
+                    <label class="info-label">所属科室</label>
+                    <div class="info-value" id="displayDepartment" th:text="${department != null ? department.name : '未分配'}">未分配</div>
+                </div>
+
+                <!-- 职称 -->
+                <div class="info-item">
+                    <label class="info-label">职称</label>
+                    <div class="info-value" id="displayTitle" th:text="${doctor.title != null ? doctor.title : '未设置'}">未设置</div>
+                </div>
+
+                <!-- 性别 -->
+                <div class="info-item">
+                    <label class="info-label">性别</label>
+                    <div class="info-value" id="displayGender" th:text="${doctor.gender != null ? doctor.gender : '未设置'}">未设置</div>
+                </div>
+
+                <!-- 专业领域 -->
+                <div class="info-item">
+                    <label class="info-label">专业领域</label>
+                    <div class="info-value" id="displaySpecialty" th:text="${doctor.specialty != null ? doctor.specialty : '未填写'}">未填写</div>
+                </div>
+
+                <!-- 出生日期 -->
+                <div class="info-item">
+                    <label class="info-label">出生日期</label>
+                    <div class="info-value" id="displayBirthDate" th:text="${doctor.birthDate != null ? doctor.birthDate : '未设置'}">未设置</div>
+                </div>
+
+                <!-- 电话号码 -->
+                <div class="info-item">
+                    <label class="info-label">电话号码</label>
+                    <div class="info-value" id="displayPhone" th:text="${user.phone}">联系电话</div>
+                </div>
+
+                <!-- 邮箱 -->
+                <div class="info-item">
+                    <label class="info-label">邮箱</label>
+                    <div class="info-value" id="displayEmail" th:text="${user.email != null ? user.email : '未设置'}">邮箱</div>
+                </div>
+
+                <!-- 个人简介 -->
+                <div class="info-item" style="grid-column: 1 / -1;">
+                    <label class="info-label">个人简介</label>
+                    <div class="info-value" style="white-space: pre-line;" id="displayIntroduction" th:text="${doctor.introduction != null ? doctor.introduction : '暂无个人简介'}">暂无个人简介</div>
+                </div>
+            </div>
+
+            <div class="btn-group mt-4">
+                <button class="btn btn-primary-custom" onclick="showEditProfileModal()">
+                    <i class="fas fa-edit me-1"></i>编辑个人信息
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 个人信息编辑弹框 -->
+<div class="profile-modal" id="editProfileModal">
+    <div class="profile-modal-content">
+        <div class="profile-modal-header">
+            <h3 class="profile-modal-title">
+                <i class="fas fa-user-edit me-2"></i>编辑个人信息
+            </h3>
+            <button class="profile-modal-close" onclick="closeEditProfileModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="profile-modal-body">
+            <form id="profileEditForm">
+                <div class="profile-form-row">
+                    <div class="profile-form-col">
+                        <div class="profile-form-group">
+                            <label class="profile-form-label">职称</label>
+                            <select class="profile-form-select" name="title" id="editTitle" required>
+                                <option value="">请选择职称</option>
+                                <option value="住院医师" th:selected="${doctor.title == '住院医师'}">住院医师</option>
+                                <option value="主治医师" th:selected="${doctor.title == '主治医师'}">主治医师</option>
+                                <option value="副主任医师" th:selected="${doctor.title == '副主任医师'}">副主任医师</option>
+                                <option value="主任医师" th:selected="${doctor.title == '主任医师'}">主任医师</option>
+                            </select>
+                            <div class="profile-error-message" id="titleError"></div>
+                        </div>
+                    </div>
+                    <div class="profile-form-col">
+                        <div class="profile-form-group">
+                            <label class="profile-form-label">性别</label>
+                            <select class="profile-form-select" name="gender" id="editGender" required>
+                                <option value="">请选择性别</option>
+                                <option value="男" th:selected="${doctor.gender == '男'}">男</option>
+                                <option value="女" th:selected="${doctor.gender == '女'}">女</option>
+                            </select>
+                            <div class="profile-error-message" id="genderError"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="profile-form-row">
+                    <div class="profile-form-col">
+                        <div class="profile-form-group">
+                            <label class="profile-form-label">专业领域</label>
+                            <input type="text" class="profile-form-control" id="editSpecialty"
+                                   name="specialty" th:value="${doctor.specialty}"
+                                   placeholder="请输入专业领域，如：心血管内科、骨科等">
+                            <div class="profile-error-message" id="specialtyError"></div>
+                        </div>
+                    </div>
+                    <div class="profile-form-col">
+                        <div class="profile-form-group">
+                            <label class="profile-form-label">出生日期</label>
+                            <input type="date" class="profile-form-control" id="editBirthDate"
+                                   name="birthDate" th:value="${doctor.birthDate}">
+                            <div class="profile-error-message" id="birthDateError"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="profile-form-row">
+                    <div class="profile-form-col">
+                        <div class="profile-form-group">
+                            <label class="profile-form-label">联系电话</label>
+                            <input type="tel" class="profile-form-control" id="editPhone"
+                                   name="phone" th:value="${user.phone}"
+                                   pattern="^1[3-9]\d{9}$" maxlength="11" required>
+                            <div class="profile-error-message" id="phoneError"></div>
+                            <div class="form-text small text-muted mt-1">请输入11位手机号码</div>
+                        </div>
+                    </div>
+                    <div class="profile-form-col">
+                        <div class="profile-form-group">
+                            <label class="profile-form-label">邮箱地址</label>
+                            <input type="email" class="profile-form-control" id="editEmail"
+                                   name="email" th:value="${user.email}" maxlength="100">
+                            <div class="profile-error-message" id="emailError"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="profile-form-group">
+                    <label class="profile-form-label">个人简介</label>
+                    <textarea class="profile-form-control" name="introduction" id="editIntroduction" rows="4"
+                              placeholder="请输入个人简介，包括教育背景、临床经验、科研成果等"
+                              th:text="${doctor.introduction}"></textarea>
+                    <div class="profile-error-message" id="introductionError"></div>
+                </div>
+
+                <div class="alert alert-info mt-3">
+                    <i class="fas fa-info-circle me-2"></i>
+                    注：姓名、工号、所属医院和科室信息需要联系管理员修改。
+                </div>
+
+                <!-- 提交状态提示 -->
+                <div class="profile-success-message" id="submitSuccess"></div>
+                <div class="profile-error-message" id="submitError"></div>
+            </form>
+        </div>
+        <div class="profile-modal-footer">
+            <button type="button" class="profile-modal-btn profile-modal-btn-secondary" onclick="closeEditProfileModal()">
+                取消
+            </button>
+            <button type="button" class="profile-modal-btn profile-modal-btn-primary" onclick="saveProfileChanges()">
+                <i class="fas fa-save me-1"></i>保存更改
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- 头像上传弹框 -->
+<div class="avatar-modal" id="avatarUploadModal">
+    <div class="avatar-modal-content">
+        <div class="avatar-modal-header">
+            <h3 class="avatar-modal-title">
+                <i class="fas fa-camera me-2"></i>上传头像
+            </h3>
+            <button class="avatar-modal-close" onclick="closeAvatarUploadModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="avatar-modal-body">
+            <!-- 文件上传区域 -->
+            <div class="avatar-upload-area" id="avatarUploadArea">
+                <div class="avatar-upload-icon">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                </div>
+                <div class="avatar-upload-text">点击选择或拖拽图片到这里</div>
+                <div class="avatar-upload-hint">支持 JPG、PNG、GIF、WebP 格式，最大 2MB</div>
+            </div>
+
+            <!-- 隐藏的文件输入 -->
+            <input type="file" id="avatarFileInput" class="avatar-file-input" accept="image/jpeg,image/png,image/gif,image/webp">
+
+            <!-- 图片预览 -->
+            <div class="avatar-preview" id="avatarPreview">
+                <img id="avatarPreviewImage" alt="预览图片">
+            </div>
+
+            <!-- 错误信息 -->
+            <div class="profile-error-message" id="avatarErrorMessage"></div>
+
+            <!-- 成功信息 -->
+            <div class="profile-success-message" id="avatarSuccessMessage"></div>
+        </div>
+        <div class="avatar-modal-footer">
+            <button type="button" class="avatar-modal-btn avatar-modal-btn-secondary" onclick="closeAvatarUploadModal()">
+                取消
+            </button>
+            <button type="button" class="avatar-modal-btn avatar-modal-btn-primary" id="uploadAvatarBtn" onclick="uploadAvatar()" disabled>
+                <i class="fas fa-upload me-1"></i>上传头像
+            </button>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script th:inline="javascript">
+    // 定义全局变量供JavaScript使用
+    const DOCTOR_ID = /*[[${doctor != null ? doctor.id : ''}]]*/ '';
+    const HOSPITAL_ID = /*[[${hospital != null ? hospital.id : ''}]]*/ '';
+    const USER_ID = /*[[${user != null ? user.id : ''}]]*/ '';
+</script>
+
+<script>
+    // 头像上传相关变量
+    let selectedFile = null;
+    let avatarPreviewUrl = null;
+
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log("医生信息管理页面加载完成");
+
+        // 加载医生头像
+        loadDoctorAvatar();
+
+        // 初始化头像信息显示
+        updateAvatarInfoDisplay();
+    });
+
+    // 加载医生头像（参考病人端实现）
+    function loadDoctorAvatar() {
+        console.log("开始加载医生头像");
+
+        fetch('/doctor/avatar/get', {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('获取头像失败，状态码：' + response.status);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log("医生头像数据响应：", data);
+
+                if (data.success) {
+                    // 更新头像显示
+                    const avatarDisplay = document.getElementById('doctorAvatarDisplay');
+                    const avatarPlaceholder = document.getElementById('doctorAvatarPlaceholder');
+                    const avatarImage = document.getElementById('doctorAvatarImage');
+
+                    if (data.hasAvatar && data.avatarUrl) {
+                        console.log("设置医生头像图片URL：", data.avatarUrl);
+                        // 有头像，显示图片
+                        // 添加时间戳防止缓存
+                        avatarImage.src = data.avatarUrl + '?t=' + new Date().getTime();
+                        avatarImage.style.display = 'block';
+                        avatarPlaceholder.style.display = 'none';
+
+                        // 确保图片加载
+                        avatarImage.onload = function() {
+                            console.log("医生头像图片加载成功");
+                        };
+                        avatarImage.onerror = function() {
+                            console.error("医生头像图片加载失败，显示默认头像");
+                            avatarImage.style.display = 'none';
+                            avatarPlaceholder.style.display = 'flex';
+                            avatarPlaceholder.textContent = data.defaultAvatar || '医';
+                        };
+                    } else {
+                        console.log("显示医生默认头像");
+                        // 没有头像，显示姓名首字母
+                        avatarPlaceholder.textContent = data.defaultAvatar || '医';
+                        avatarPlaceholder.style.display = 'flex';
+                        avatarImage.style.display = 'none';
+                    }
+                } else {
+                    console.error("获取医生头像失败：", data.message);
+                }
+            })
+            .catch(error => {
+                console.error("获取医生头像出错：", error);
+                // 显示默认头像
+                const avatarPlaceholder = document.getElementById('doctorAvatarPlaceholder');
+                if (avatarPlaceholder) {
+                    avatarPlaceholder.textContent = '医';
+                    avatarPlaceholder.style.display = 'flex';
+                }
+            });
+    }
+
+    // 更新头像信息显示
+    function updateAvatarInfoDisplay() {
+        // 获取页面中的医生信息
+        const realName = document.getElementById('displayRealName').textContent.trim();
+        const title = document.getElementById('displayTitle').textContent.trim();
+        const department = document.getElementById('displayDepartment').textContent.trim();
+
+        // 更新头像区域的信息
+        const doctorDisplayName = document.getElementById('doctorDisplayName');
+        const doctorTitle = document.getElementById('doctorTitle');
+        const doctorDepartment = document.getElementById('doctorDepartment');
+
+        if (doctorDisplayName && realName && realName !== '未设置') {
+            doctorDisplayName.textContent = realName;
+        }
+
+        if (doctorTitle) {
+            doctorTitle.textContent = title !== '未设置' ? title : '未设置职称';
+        }
+
+        if (doctorDepartment && department && department !== '未分配') {
+            doctorDepartment.textContent = ' - ' + department;
+            doctorDepartment.style.display = 'inline';
+        }
+    }
+
+    // 显示头像上传弹框
+    function showAvatarUploadModal() {
+        console.log("用户点击头像，显示上传弹框");
+
+        try {
+            // 重置状态
+            selectedFile = null;
+            avatarPreviewUrl = null;
+
+            // 隐藏预览
+            const preview = document.getElementById('avatarPreview');
+            const errorMsg = document.getElementById('avatarErrorMessage');
+            const successMsg = document.getElementById('avatarSuccessMessage');
+
+            if (preview) preview.style.display = 'none';
+            if (errorMsg) errorMsg.style.display = 'none';
+            if (successMsg) successMsg.style.display = 'none';
+
+            // 禁用上传按钮
+            const uploadBtn = document.getElementById('uploadAvatarBtn');
+            if (uploadBtn) uploadBtn.disabled = true;
+
+            // 显示弹框
+            const modal = document.getElementById('avatarUploadModal');
+            if (modal) {
+                modal.style.display = 'block';
+                document.body.style.overflow = 'hidden';
+
+                // 绑定拖拽事件
+                setTimeout(() => {
+                    bindDragAndDropEvents();
+                }, 100);
+            } else {
+                console.error("头像上传弹框元素不存在！");
+                alert("头像上传功能加载失败，请刷新页面");
+            }
+        } catch (error) {
+            console.error("显示头像上传弹框出错：", error);
+            alert("头像上传功能出错，请刷新页面");
+        }
+    }
+
+    // 关闭头像上传弹框
+    function closeAvatarUploadModal() {
+        console.log("关闭头像上传弹框");
+        const modal = document.getElementById('avatarUploadModal');
+        if (modal) {
+            modal.style.display = 'none';
+            document.body.style.overflow = '';
+        }
+
+        // 清理预览URL
+        if (avatarPreviewUrl) {
+            URL.revokeObjectURL(avatarPreviewUrl);
+            avatarPreviewUrl = null;
+        }
+    }
+
+    // 绑定拖拽事件
+    function bindDragAndDropEvents() {
+        console.log("绑定拖拽事件 - 开始");
+
+        const uploadArea = document.getElementById('avatarUploadArea');
+        const fileInput = document.getElementById('avatarFileInput');
+
+        if (!uploadArea || !fileInput) {
+            console.error("上传区域或文件输入元素不存在！");
+            return;
+        }
+
+        // 点击上传区域触发文件选择
+        uploadArea.addEventListener('click', function(e) {
+            if (e.target !== fileInput) {
+                fileInput.click();
+            }
+        });
+
+        // 文件选择变化事件
+        fileInput.addEventListener('change', function(e) {
+            if (e.target.files && e.target.files[0]) {
+                handleFileSelect(e.target.files[0]);
+            }
+        });
+
+        // 拖拽事件
+        uploadArea.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            uploadArea.classList.add('drag-over');
+        });
+
+        uploadArea.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            uploadArea.classList.remove('drag-over');
+        });
+
+        uploadArea.addEventListener('drop', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            uploadArea.classList.remove('drag-over');
+
+            if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                handleFileSelect(e.dataTransfer.files[0]);
+            }
+        });
+    }
+
+    // 处理文件选择
+    function handleFileSelect(file) {
+        console.log("选择的文件：", file);
+
+        // 验证文件类型
+        const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        if (!validTypes.includes(file.type)) {
+            showAvatarError('请选择有效的图片格式（JPG、PNG、GIF、WebP）');
+            return;
+        }
+
+        // 验证文件大小（2MB）
+        const maxSize = 2 * 1024 * 1024; // 2MB
+        if (file.size > maxSize) {
+            showAvatarError('文件大小不能超过2MB');
+            return;
+        }
+
+        selectedFile = file;
+
+        // 创建预览
+        if (avatarPreviewUrl) {
+            URL.revokeObjectURL(avatarPreviewUrl);
+        }
+
+        avatarPreviewUrl = URL.createObjectURL(file);
+
+        // 显示预览
+        const previewImage = document.getElementById('avatarPreviewImage');
+        const previewContainer = document.getElementById('avatarPreview');
+
+        previewImage.src = avatarPreviewUrl;
+        previewContainer.style.display = 'block';
+
+        // 启用上传按钮
+        document.getElementById('uploadAvatarBtn').disabled = false;
+
+        // 隐藏错误信息
+        document.getElementById('avatarErrorMessage').style.display = 'none';
+    }
+
+    // 显示头像上传错误
+    function showAvatarError(message) {
+        const errorElement = document.getElementById('avatarErrorMessage');
+        errorElement.textContent = message;
+        errorElement.style.display = 'block';
+
+        // 隐藏成功信息
+        document.getElementById('avatarSuccessMessage').style.display = 'none';
+    }
+
+    // 显示头像上传成功
+    function showAvatarSuccess(message) {
+        const successElement = document.getElementById('avatarSuccessMessage');
+        successElement.textContent = message;
+        successElement.style.display = 'block';
+
+        // 隐藏错误信息
+        document.getElementById('avatarErrorMessage').style.display = 'none';
+    }
+
+    // 上传头像
+    function uploadAvatar() {
+        if (!selectedFile) {
+            showAvatarError('请先选择图片');
+            return;
+        }
+
+        // 禁用上传按钮
+        const uploadBtn = document.getElementById('uploadAvatarBtn');
+        uploadBtn.disabled = true;
+        uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>上传中...';
+
+        // 创建FormData
+        const formData = new FormData();
+        formData.append('avatar', selectedFile);
+
+        // 发送上传请求
+        fetch('/doctor/avatar/upload', {
+            method: 'POST',
+            body: formData
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAvatarSuccess('头像上传成功！');
+
+                    // 更新页面头像显示
+                    const avatarImage = document.getElementById('doctorAvatarImage');
+                    const avatarPlaceholder = document.getElementById('doctorAvatarPlaceholder');
+
+                    // 使用新的URL，避免缓存问题
+                    avatarImage.src = data.avatarUrl + '?t=' + new Date().getTime();
+                    avatarImage.style.display = 'block';
+                    avatarPlaceholder.style.display = 'none';
+
+                    // 3秒后关闭弹框
+                    setTimeout(() => {
+                        closeAvatarUploadModal();
+                    }, 3000);
+                } else {
+                    showAvatarError('上传失败：' + data.message);
+                    uploadBtn.disabled = false;
+                    uploadBtn.innerHTML = '<i class="fas fa-upload me-1"></i>上传头像';
+                }
+            })
+            .catch(error => {
+                console.error('上传出错：', error);
+                showAvatarError('上传失败：网络错误');
+                uploadBtn.disabled = false;
+                uploadBtn.innerHTML = '<i class="fas fa-upload me-1"></i>上传头像';
+            });
+    }
+
+    // 显示编辑个人信息弹框
+    function showEditProfileModal() {
+        console.log("显示编辑弹框");
+
+        // 填充表单数据
+        const editTitle = document.getElementById('editTitle');
+        const editGender = document.getElementById('editGender');
+        const editSpecialty = document.getElementById('editSpecialty');
+        const editBirthDate = document.getElementById('editBirthDate');
+        const editPhone = document.getElementById('editPhone');
+        const editEmail = document.getElementById('editEmail');
+        const editIntroduction = document.getElementById('editIntroduction');
+
+        // 从页面元素获取当前值
+        const displayTitle = document.getElementById('displayTitle').textContent;
+        const displayGender = document.getElementById('displayGender').textContent;
+        const displaySpecialty = document.getElementById('displaySpecialty').textContent;
+        const displayBirthDate = document.getElementById('displayBirthDate').textContent;
+        const displayPhone = document.getElementById('displayPhone').textContent;
+        const displayEmail = document.getElementById('displayEmail').textContent;
+        const displayIntroduction = document.getElementById('displayIntroduction').textContent;
+
+        if (editTitle) editTitle.value = displayTitle !== '未设置' ? displayTitle : '';
+        if (editGender) editGender.value = displayGender !== '未设置' ? displayGender : '';
+        if (editSpecialty) editSpecialty.value = displaySpecialty !== '未填写' ? displaySpecialty : '';
+
+        // 处理日期格式
+        if (editBirthDate) {
+            if (displayBirthDate !== '未设置' && /^\d{4}-\d{2}-\d{2}$/.test(displayBirthDate)) {
+                editBirthDate.value = displayBirthDate;
+            } else {
+                editBirthDate.value = '';
+            }
+        }
+
+        if (editPhone) editPhone.value = displayPhone;
+        if (editEmail) editEmail.value = displayEmail !== '未设置' ? displayEmail : '';
+        if (editIntroduction) editIntroduction.value = displayIntroduction !== '暂无个人简介' ? displayIntroduction : '';
+
+        // 清除之前的错误信息
+        clearErrorMessages();
+
+        // 显示弹框
+        const modal = document.getElementById('editProfileModal');
+        if (modal) {
+            modal.style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        }
+    }
+
+    // 关闭编辑个人信息弹框
+    function closeEditProfileModal() {
+        console.log("关闭编辑弹框");
+        const modal = document.getElementById('editProfileModal');
+        if (modal) {
+            modal.style.display = 'none';
+            document.body.style.overflow = '';
+        }
+
+        // 清除错误信息和成功信息
+        clearErrorMessages();
+        const submitSuccess = document.getElementById('submitSuccess');
+        const submitError = document.getElementById('submitError');
+        if (submitSuccess) submitSuccess.classList.remove('show');
+        if (submitError) submitError.classList.remove('show');
+    }
+
+    // 清除所有错误信息
+    function clearErrorMessages() {
+        const errorElements = document.querySelectorAll('.profile-error-message');
+        errorElements.forEach(element => {
+            element.textContent = '';
+            element.classList.remove('show');
+        });
+    }
+
+    // 显示错误信息
+    function showError(elementId, message) {
+        const errorElement = document.getElementById(elementId);
+        if (errorElement) {
+            errorElement.textContent = message;
+            errorElement.classList.add('show');
+        }
+    }
+
+    // 表单验证
+    function validateForm() {
+        let isValid = true;
+        clearErrorMessages();
+
+        // 验证职称
+        const titleInput = document.getElementById('editTitle');
+        const title = titleInput ? titleInput.value.trim() : '';
+        if (!title) {
+            showError('titleError', '请选择职称');
+            isValid = false;
+        }
+
+        // 验证性别
+        const genderInput = document.getElementById('editGender');
+        const gender = genderInput ? genderInput.value.trim() : '';
+        if (!gender) {
+            showError('genderError', '请选择性别');
+            isValid = false;
+        }
+
+        // 验证手机号
+        const phoneInput = document.getElementById('editPhone');
+        const phone = phoneInput ? phoneInput.value.trim() : '';
+        const phoneRegex = /^1[3-9]\d{9}$/;
+        if (!phone) {
+            showError('phoneError', '请输入手机号码');
+            isValid = false;
+        } else if (!phoneRegex.test(phone)) {
+            showError('phoneError', '请输入有效的11位手机号码');
+            isValid = false;
+        }
+
+        // 验证邮箱（可选）
+        const emailInput = document.getElementById('editEmail');
+        const email = emailInput ? emailInput.value.trim() : '';
+        if (email) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                showError('emailError', '请输入有效的邮箱地址');
+                isValid = false;
+            } else if (email.length > 100) {
+                showError('emailError', '邮箱地址不能超过100个字符');
+                isValid = false;
+            }
+        }
+
+        return isValid;
+    }
+
+    // 保存个人信息更改
+    function saveProfileChanges() {
+        try {
+            console.log("保存个人信息");
+
+            // 验证表单
+            if (!validateForm()) {
+                return;
+            }
+
+            // 获取医生ID
+            const doctorId = DOCTOR_ID;
+            if (!doctorId) {
+                alert('无法获取医生ID，请刷新页面重试');
+                return;
+            }
+
+            // 获取表单数据
+            const editTitle = document.getElementById('editTitle');
+            const editGender = document.getElementById('editGender');
+            const editSpecialty = document.getElementById('editSpecialty');
+            const editBirthDate = document.getElementById('editBirthDate');
+            const editPhone = document.getElementById('editPhone');
+            const editEmail = document.getElementById('editEmail');
+            const editIntroduction = document.getElementById('editIntroduction');
+
+            const formData = {
+                id: doctorId,
+                title: editTitle ? editTitle.value.trim() : '',
+                gender: editGender ? editGender.value.trim() : '',
+                specialty: editSpecialty ? editSpecialty.value.trim() : '',
+                birthDate: editBirthDate ? editBirthDate.value : '',
+                phone: editPhone ? editPhone.value.trim() : '',
+                email: editEmail ? editEmail.value.trim() : '',
+                introduction: editIntroduction ? editIntroduction.value.trim() : ''
+            };
+
+            console.log("提交的数据:", formData);
+
+            // 显示加载状态
+            const saveBtn = document.querySelector('.profile-modal-btn-primary');
+            if (!saveBtn) return;
+
+            const originalText = saveBtn.innerHTML;
+            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>保存中...';
+            saveBtn.disabled = true;
+
+            // 清除之前的提示信息
+            clearErrorMessages();
+            const submitSuccess = document.getElementById('submitSuccess');
+            const submitError = document.getElementById('submitError');
+            if (submitSuccess) submitSuccess.classList.remove('show');
+            if (submitError) submitError.classList.remove('show');
+
+            // 发送AJAX请求到后端
+            fetch('/doctor/profile/update', { // 注意：这里要使用正确的端点
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: new URLSearchParams(formData).toString()
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('网络响应异常，状态码：' + response.status);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log("服务器响应:", data);
+
+                    if (data.success) {
+                        // 更新页面显示的信息
+                        const displayTitle = document.getElementById('displayTitle');
+                        const displayGender = document.getElementById('displayGender');
+                        const displaySpecialty = document.getElementById('displaySpecialty');
+                        const displayBirthDate = document.getElementById('displayBirthDate');
+                        const displayPhone = document.getElementById('displayPhone');
+                        const displayEmail = document.getElementById('displayEmail');
+                        const displayIntroduction = document.getElementById('displayIntroduction');
+
+                        // 更新头像区域的信息
+                        const doctorTitle = document.getElementById('doctorTitle');
+
+                        if (displayTitle) displayTitle.textContent = formData.title || '未设置';
+                        if (displayGender) displayGender.textContent = formData.gender || '未设置';
+                        if (displaySpecialty) displaySpecialty.textContent = formData.specialty || '未填写';
+                        if (displayBirthDate) displayBirthDate.textContent = formData.birthDate || '未设置';
+                        if (displayPhone) displayPhone.textContent = formData.phone;
+                        if (displayEmail) displayEmail.textContent = formData.email || '未设置';
+                        if (displayIntroduction) displayIntroduction.textContent = formData.introduction || '暂无个人简介';
+
+                        // 更新头像区域的职称显示
+                        if (doctorTitle) {
+                            doctorTitle.textContent = formData.title || '未设置职称';
+                        }
+
+                        // 显示成功信息
+                        if (submitSuccess) {
+                            submitSuccess.textContent = data.message || '个人信息更新成功！';
+                            submitSuccess.classList.add('show');
+                        }
+
+                        // 3秒后自动关闭弹框
+                        setTimeout(() => {
+                            closeEditProfileModal();
+                        }, 3000);
+                    } else {
+                        // 显示错误信息
+                        if (submitError) {
+                            submitError.textContent = data.message || '更新失败，请重试';
+                            submitError.classList.add('show');
+                        }
+
+                        // 如果有字段级错误，显示在对应字段下
+                        if (data.fieldErrors) {
+                            Object.keys(data.fieldErrors).forEach(field => {
+                                const errorId = field + 'Error';
+                                const errorElement = document.getElementById(errorId);
+                                if (errorElement) {
+                                    errorElement.textContent = data.fieldErrors[field];
+                                    errorElement.classList.add('show');
+                                }
+                            });
+                        }
+
+                        // 恢复按钮状态
+                        saveBtn.innerHTML = originalText;
+                        saveBtn.disabled = false;
+                    }
+                })
+                .catch(error => {
+                    console.error('更新失败:', error);
+
+                    // 显示错误信息
+                    if (submitError) {
+                        submitError.textContent = '网络错误或服务器异常，请稍后重试';
+                        submitError.classList.add('show');
+                    }
+
+                    // 恢复按钮状态
+                    saveBtn.innerHTML = originalText;
+                    saveBtn.disabled = false;
+                });
+        } catch (error) {
+            console.error("保存信息出错：", error);
+            alert("保存失败，请刷新页面重试");
+
+            // 恢复按钮状态
+            const saveBtn = document.querySelector('.profile-modal-btn-primary');
+            if (saveBtn) {
+                saveBtn.innerHTML = '<i class="fas fa-save me-1"></i>保存更改';
+                saveBtn.disabled = false;
+            }
+        }
+    }
+
+    // 按ESC键关闭弹框
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            const modal = document.getElementById('editProfileModal');
+            if (modal && modal.style.display === 'block') {
+                closeEditProfileModal();
+            }
+
+            const avatarModal = document.getElementById('avatarUploadModal');
+            if (avatarModal && avatarModal.style.display === 'block') {
+                closeAvatarUploadModal();
+            }
+        }
+    });
+
+    // 点击弹框外部关闭
+    window.onclick = function(event) {
+        const editModal = document.getElementById('editProfileModal');
+        const avatarModal = document.getElementById('avatarUploadModal');
+
+        if (editModal && event.target === editModal) {
+            closeEditProfileModal();
+        }
+
+        if (avatarModal && event.target === avatarModal) {
+            closeAvatarUploadModal();
+        }
+    }
+</script>
+</body>
+</html>

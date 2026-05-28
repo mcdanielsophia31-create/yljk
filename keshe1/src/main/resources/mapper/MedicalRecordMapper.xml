@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.keshe1.mapper.MedicalRecordMapper">
+
+
+
+    <select id="getDiagnosisCountFromMedicalRecord" resultType="int">
+        SELECT COUNT(*)
+        FROM medical_record mr
+                 INNER JOIN patient p ON mr.patient_id = p.id
+                 LEFT JOIN user u ON p.user_id = u.id
+        WHERE mr.diagnosis IS NOT NULL
+          AND mr.diagnosis != ''
+          AND mr.visit_date >= DATE_SUB(CURDATE(), INTERVAL #{timeRange} MONTH)
+          AND (
+            #{hospitalId} IS NULL  -- 系统管理员能看到所有数据
+           OR u.hospital_id = #{hospitalId}  -- 医院管理员只能看自己医院的数据
+            )
+    </select>
+    <!-- ... existing code ... -->
+    <!-- ... existing code ... -->
+    <select id="selectDiseaseTrendFromMedicalRecord" resultType="java.util.Map">
+        SELECT
+            mr.diagnosis as diseaseName,
+            DATE_FORMAT(mr.visit_date, '%Y-%m') as month,
+            COUNT(*) as count
+        FROM medical_record mr
+            INNER JOIN patient p ON mr.patient_id = p.id
+            LEFT JOIN user u ON p.user_id = u.id
+        WHERE mr.diagnosis IS NOT NULL
+          AND mr.diagnosis != ''
+          AND mr.visit_date >= DATE_SUB(CURDATE(), INTERVAL #{timeRange} MONTH)
+          AND (
+            #{hospitalId} IS NULL  -- 系统管理员能看到所有数据
+           OR u.hospital_id = #{hospitalId}  -- 医院管理员只能看自己医院的数据
+            )
+        GROUP BY mr.diagnosis, DATE_FORMAT(mr.visit_date, '%Y-%m')
+        ORDER BY DATE_FORMAT(mr.visit_date, '%Y-%m'), mr.diagnosis
+    </select>
+    <!-- ... existing code ... -->
+</mapper>

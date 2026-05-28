@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>总体排班 - 医疗健康管理系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" th:href="@{/css/unified-style.css}">
+    <style>
+        .schedule-header {
+            background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+            color: white;
+            padding: 25px 30px;
+            border-radius: 16px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+        }
+        
+        .schedule-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            border: 1px solid #E5E7EB;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+        }
+        
+        .schedule-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+        }
+        
+        .schedule-card-header {
+            padding: 15px 20px;
+            background: #F9FAFB;
+            border-bottom: 1px solid #E5E7EB;
+            border-radius: 12px 12px 0 0 !important;
+            font-weight: 600;
+            color: #1F2937;
+        }
+        
+        .schedule-card-body {
+            padding: 20px;
+        }
+        
+        .schedule-info-item {
+            margin-bottom: 10px;
+            display: flex;
+        }
+        
+        .schedule-info-label {
+            font-weight: 600;
+            color: #4B5563;
+            min-width: 100px;
+        }
+        
+        .schedule-info-value {
+            color: #1F2937;
+            flex: 1;
+        }
+        
+        .status-valid {
+            background: #D1FAE5;
+            color: #065F46;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .status-cancelled {
+            background: #FEE2E2;
+            color: #991B1B;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .status-completed {
+            background: #E5E7EB;
+            color: #4B5563;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .time-slot-morning {
+            background: #DBEAFE;
+            color: #1D4ED8;
+        }
+        
+        .time-slot-afternoon {
+            background: #FDE68A;
+            color: #92400E;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <!-- 页面标题 -->
+        <div class="schedule-header">
+            <h1><i class="fas fa-calendar-alt me-2"></i>总体排班管理</h1>
+            <p class="mb-0">查看和管理所有医生的排班信息</p>
+        </div>
+
+        <!-- 排班列表 -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0"><i class="fas fa-list me-2"></i>排班列表</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <button class="btn btn-primary me-2">
+                                <i class="fas fa-plus me-1"></i>新增排班
+                            </button>
+                            <button class="btn btn-outline-primary">
+                                <i class="fas fa-filter me-1"></i>筛选
+                            </button>
+                        </div>
+                        
+                        <div id="schedules-container">
+                            <div th:if="${schedules != null and !schedules.isEmpty()}" th:each="schedule : ${schedules}">
+                                <div class="schedule-card">
+                                    <div class="schedule-card-header">
+                                        <span th:text="${schedule.doctorName}">医生姓名</span>
+                                        <span class="badge bg-secondary ms-2" th:text="${schedule.employeeId}">工号</span>
+                                    </div>
+                                    <div class="schedule-card-body">
+                                        <div class="schedule-info-item">
+                                            <span class="schedule-info-label">排班日期:</span>
+                                            <span class="schedule-info-value" th:text="${#dates.format(schedule.scheduleDate, 'yyyy-MM-dd')}">排班日期</span>
+                                        </div>
+                                        <div class="schedule-info-item">
+                                            <span class="schedule-info-label">时间段:</span>
+                                            <span class="schedule-info-value">
+                                                <span class="time-slot-morning" th:if="${schedule.timeSlot == '上午'}" th:text="${schedule.timeSlot}">上午</span>
+                                                <span class="time-slot-afternoon" th:if="${schedule.timeSlot == '下午'}" th:text="${schedule.timeSlot}">下午</span>
+                                            </span>
+                                        </div>
+                                        <div class="schedule-info-item">
+                                            <span class="schedule-info-label">诊室:</span>
+                                            <span class="schedule-info-value" th:text="${schedule.roomNumber ?: '待分配'}">诊室号</span>
+                                        </div>
+                                        <div class="schedule-info-item">
+                                            <span class="schedule-info-label">挂号费用:</span>
+                                            <span class="schedule-info-value" th:text="${schedule.registrationFee} + '元'">挂号费用</span>
+                                        </div>
+                                        <div class="schedule-info-item">
+                                            <span class="schedule-info-label">挂号限额:</span>
+                                            <span class="schedule-info-value" th:text="${schedule.registrationQuota} + '/' + ${schedule.registeredCount}">限额/已挂号</span>
+                                        </div>
+                                        <div class="schedule-info-item">
+                                            <span class="schedule-info-label">状态:</span>
+                                            <span class="schedule-info-value">
+                                                <span class="status-valid" th:if="${schedule.scheduleStatus == 'VALID'}">有效</span>
+                                                <span class="status-cancelled" th:if="${schedule.scheduleStatus == 'CANCELLED'}">已取消</span>
+                                                <span class="status-completed" th:if="${schedule.scheduleStatus == 'COMPLETED'}">已完成</span>
+                                            </span>
+                                        </div>
+                                        <div class="mt-3">
+                                            <button class="btn btn-sm btn-outline-primary me-2">
+                                                <i class="fas fa-edit"></i> 编辑
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger">
+                                                <i class="fas fa-trash"></i> 删除
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div th:if="${schedules == null or schedules.isEmpty()}" class="text-center py-5">
+                                <i class="fas fa-calendar fa-3x text-muted mb-3"></i>
+                                <p class="text-muted">暂无排班信息</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

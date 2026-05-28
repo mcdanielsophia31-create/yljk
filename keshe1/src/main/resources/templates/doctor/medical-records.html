@@ -1,0 +1,1419 @@
+<div class="container-fluid" id="medicalRecordsContainer">
+    <style>
+        .btn-success {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            border: none;
+            padding: 10px 20px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn-success:hover {
+            background: linear-gradient(135deg, #218838, #1ba87e);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+        }
+
+        #patientSelect {
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #ced4da;
+            transition: border-color 0.3s ease;
+        }
+
+        #patientSelect:focus {
+            border-color: #28a745;
+            box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+        }
+    </style>
+    <!-- 添加病历按钮 -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <button class="btn btn-success" onclick="window.openCreateRecordModal()">
+                <i class="fas fa-plus-circle me-2"></i>添加病历
+            </button>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h4><i class="fas fa-notes-medical me-2"></i>电子病历</h4>
+                        <div class="input-group input-group-sm" style="width: 250px;">
+                            <input type="text" class="form-control" placeholder="搜索患者姓名..."
+                                   id="searchRecordInput" onkeyup="window.filterMedicalRecordsTable()">
+                            <span class="input-group-text bg-light"
+                                  style="cursor: pointer;"
+                                  onclick="window.filterMedicalRecordsTable()">
+                                <i class="fas fa-search"></i>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info d-none" id="noRecordsAlert">
+                        <i class="fas fa-info-circle me-2"></i>暂无病历记录
+                    </div>
+
+                    <div class="table-responsive" id="recordsTableContainer">
+                        <table class="table table-striped table-hover" id="medicalRecordsTable">
+                            <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>患者姓名</th>
+                                <th>主治医生/科室</th>
+                                <th>诊断结果</th>
+                                <th>就诊日期</th>
+                                <th>操作</th>
+                            </tr>
+                            </thead>
+                            <tbody id="medicalRecordsTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加病历编辑模态框） -->
+    <div class="modal fade" id="recordEditModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title text-dark"><i class="fas fa-edit me-2"></i>修改病历信息</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editRecordForm">
+                        <input type="hidden" id="editRecordId"/>
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label text-muted">患者姓名 (不可修)</label>
+                                <input type="text" class="form-control bg-light" id="editPatientName" readonly/>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-muted">就诊日期 (不可修)</label>
+                                <input type="text" class="form-control bg-light" id="editVisitDate" readonly/>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label fw-bold">诊断结果 (Diagnosis)</label>
+                                <input type="text" class="form-control" id="editDiagnosis"/>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label fw-bold">主诉 (Chief Complaint)</label>
+                                <textarea class="form-control" id="editChiefComplaint" rows="2"></textarea>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label fw-bold">现病史 (Present Illness)</label>
+                                <textarea class="form-control" id="editPresentIllness" rows="3"></textarea>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label fw-bold">既往史 (Past Illness)</label>
+                                <textarea class="form-control" id="editPastIllness" rows="2"></textarea>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label fw-bold">体格检查 (Physical Exam)</label>
+                                <textarea class="form-control" id="editPhysicalExam" rows="2"></textarea>
+                            </div>
+
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label">辅助检查</label>
+                                <div class="input-group">
+                                    <textarea class="form-control" id="editAuxiliaryExam" rows="2"></textarea>
+                                    <button class="btn btn-outline-success" type="button" onclick="openPrescribeModal()">
+                                        <i class="fas fa-plus-circle"></i> 开具检查
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label fw-bold text-primary">治疗方案 (Treatment Plan)</label>
+                                <div class="d-flex">
+                                    <textarea class="form-control border-primary" id="editTreatmentPlan" rows="4" readonly></textarea>
+                                    <button type="button" class="btn btn-success ms-2" style="height: fit-content; align-self: center;"
+                                            onclick="window.openPrescriptionPage()">
+                                        <i class="fas fa-prescription-bottle-alt"></i> 开药
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="window.saveRecordChanges()">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- 添加：创建病历模态框 -->
+    <div class="modal fade" id="createRecordModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-plus-circle me-2"></i>创建新病历
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">选择患者</label>
+                        <select class="form-select" id="patientSelect">
+                            <option value="">-- 请选择患者 --</option>
+                            <!-- 患者选项将通过JS动态加载 -->
+                        </select>
+                        <div class="form-text">为选中的患者创建新的病历记录</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-success" onclick="createNewMedicalRecord()">创建病历</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- 添加病历详情模态框 -->
+    <div class="modal fade" id="recordDetailModal" tabindex="-1" aria-labelledby="recordDetailModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="recordDetailModalLabel">
+                        <i class="fas fa-file-medical-alt me-2"></i>病历详情
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="modalLoading" class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2 text-muted">正在获取病历详情...</p>
+                    </div>
+
+                    <div id="modalContent" style="display: none;">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold text-secondary">就诊日期</label>
+                                <div class="p-2 bg-light rounded" id="detailVisitDate"></div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold text-secondary">诊断结果</label>
+                                <div class="p-2 bg-light rounded text-primary fw-bold" id="detailDiagnosis"></div>
+                            </div>
+
+                            <hr class="my-3">
+
+                            <div class="col-12">
+                                <label class="form-label fw-bold"><i class="fas fa-user-md me-1"></i>主诉 (Chief Complaint)</label>
+                                <div class="p-3 border rounded bg-white mb-2" id="detailChiefComplaint"></div>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label fw-bold"><i class="fas fa-notes-medical me-1"></i>现病史 (Present Illness)</label>
+                                <div class="p-3 border rounded bg-white mb-2" id="detailPresentIllness"></div>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label fw-bold"><i class="fas fa-history me-1"></i>既往史 (Past Illness)</label>
+                                <div class="p-3 border rounded bg-white mb-2" id="detailPastIllness"></div>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label fw-bold"><i class="fas fa-stethoscope me-1"></i>体格检查 (Physical Exam)</label>
+                                <div class="p-3 border rounded bg-white mb-2" id="detailPhysicalExam"></div>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label fw-bold"><i class="fas fa-vial me-1"></i>辅助检查 (Auxiliary Exam)</label>
+                                <div class="p-3 border rounded bg-white mb-2" id="detailAuxiliaryExam"></div>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label fw-bold"><i class="fas fa-pills me-1"></i>治疗方案 (Treatment Plan)</label>
+                                <div class="p-3 border border-primary rounded bg-light mb-2 text-dark" id="detailTreatmentPlan"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 开检查模态框 -->
+    <div class="modal fade" id="prescribeModal" tabindex="-1" style="z-index: 1060;">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title"><i class="fas fa-flask me-2"></i>开具检查项目</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- 已开立的检查项目列表 -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold text-primary">
+                            <i class="fas fa-list-check me-2"></i>已开立的检查项目
+                        </label>
+                        <div class="card">
+                            <div class="card-body p-3">
+                                <div id="existingExamsList" class="d-flex flex-column gap-2">
+                                    <!-- 动态加载已开立的检查项目 -->
+                                    <div class="text-center text-muted py-3">
+                                        <i class="fas fa-spinner fa-spin me-2"></i>加载中...
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info py-2 small">
+                        <i class="fas fa-info-circle"></i> 选择检查类型后，请在右侧选择具体项目。点击下方 "+" 号添加多项。
+                    </div>
+
+                    <div id="examItemsContainer">
+                        <div class="row g-2 mb-2 exam-row" id="examRow_0">
+                            <div class="col-md-5">
+                                <select class="form-select type-select" onchange="handleTypeChange(this)">
+                                    <option value="">-- 选择检查类型 --</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <select class="form-select item-select" disabled>
+                                    <option value="">-- 先选择类型 --</option>
+                                </select>
+                            </div>
+                            <div class="col-md-1 d-grid">
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="button" class="btn btn-sm btn-outline-primary mt-2" onclick="addExamRow()">
+                        <i class="fas fa-plus"></i> 添加项目
+                    </button>
+                </div>
+                <div class="modal-footer">
+                    <div class="me-auto text-muted small">保存后状态将变为"待完成"</div>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-success" onclick="submitPrescription()">确认开单</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script th:inline="none">
+        // XSS 防护工具函数
+        function escapeHtml(text) {
+            if (!text) return '';
+            return String(text)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // 辅助函数：设置文本，如果为空则显示"无"
+        function setText(elementId, value) {
+            const el = document.getElementById(elementId);
+            if (el) {
+                el.textContent = value || '无';
+            }
+        }
+
+        // 格式化治疗方案（将JSON转换为易读文本）
+        function formatTreatmentPlan(treatmentPlan) {
+            if (!treatmentPlan || treatmentPlan.trim() === '') {
+                return '无';
+            }
+
+            // 新增：检查是否是空数组 JSON
+            if (treatmentPlan.trim() === '[]' || treatmentPlan.trim() === '[]\n') {
+                return '无';
+            }
+
+            try {
+                // 尝试解析JSON
+                const data = JSON.parse(treatmentPlan);
+
+                // 新增：如果是空数组，返回"无"
+                if (Array.isArray(data) && data.length === 0) {
+                    return '无';
+                }
+
+                if (Array.isArray(data) && data.length > 0) {
+                    let formattedText = '';
+
+                    data.forEach((item, index) => {
+                        formattedText += `${index + 1}. ${item.medicineName || '未知药品'}`;
+
+                        if (item.genericName) {
+                            formattedText += ` (${item.genericName})`;
+                        }
+
+                        if (item.specification) {
+                            formattedText += `，规格：${item.specification}`;
+                        }
+
+                        if (item.frequency) {
+                            formattedText += `，用法：${item.frequency}`;
+                        }
+
+                        if (item.quantity) {
+                            formattedText += `，每次${item.quantity}${item.dosageUnit || ''}`;
+                        }
+
+                        // 新增：显示开药数量和服用天数
+                        if (item.totalQuantity) {
+                            formattedText += `，开药：${item.totalQuantity}盒`;
+                        }
+
+                        if (item.days) {
+                            formattedText += `，服用${item.days}天`;
+                        }
+
+                        formattedText += '\n';
+                    });
+
+                    return formattedText.trim();
+                }
+
+                // 如果不是数组，直接返回
+                return treatmentPlan;
+            } catch (error) {
+                // 如果不是JSON格式，直接返回原始文本
+                return treatmentPlan;
+            }
+        }
+
+
+        /**
+         *  加载病历列表 (主入口)
+         */
+        window.loadMedicalRecords = function () {
+            console.log("开始加载病历数据...");
+
+            const tableBody = document.getElementById('medicalRecordsTableBody');
+            const alertBox = document.getElementById('noRecordsAlert');
+            const tableContainer = document.getElementById('recordsTableContainer');
+
+            if (!tableBody) return;
+
+            // 显示加载状态
+            tableBody.innerHTML = '<tr><td colspan="6" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>';
+            if (alertBox) alertBox.classList.add('d-none');
+            if (tableContainer) tableContainer.classList.remove('d-none');
+
+            fetch('/doctor/api/medical-records')
+                .then(res => {
+                    if (!res.ok) throw new Error('网络请求失败');
+                    return res.json();
+                })
+                .then(data => window.renderMedicalRecordsTable(data))
+                .catch(err => {
+                    console.error(err);
+                    tableBody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">数据加载失败</td></tr>';
+                });
+        };
+
+        /**
+         * 渲染表格
+         */
+        window.renderMedicalRecordsTable = function (records) {
+            const tableBody = document.getElementById('medicalRecordsTableBody');
+            if (!records || records.length === 0) {
+                document.getElementById('recordsTableContainer').classList.add('d-none');
+                document.getElementById('noRecordsAlert').classList.remove('d-none');
+                return;
+            }
+
+            document.getElementById('recordsTableContainer').classList.remove('d-none');
+            document.getElementById('noRecordsAlert').classList.add('d-none');
+
+            tableBody.innerHTML = records.map(record => {
+                // 处理可能包含单引号的名字，防止破坏 HTML 结构
+                const safeName = (record.patientName || '').replace(/'/g, "\\'");
+                const safeDate = (record.visitDate || '').replace(/'/g, "\\'");
+                const recordId = record.recordId || record.id;
+
+                return `
+        <tr>
+            <td>#${recordId}</td>
+            <td>${escapeHtml(record.patientName)}</td>
+            <td>${escapeHtml(record.doctorName)} <br><small class="text-muted">${escapeHtml(record.departmentName)}</small></td>
+            <td>${escapeHtml(record.diagnosis)}</td>
+            <td>${escapeHtml(record.visitDate)}</td>
+            <td>
+                <button class="btn btn-sm btn-outline-primary" onclick="window.viewRecordDetail(${recordId})">
+                    <i class="fas fa-eye"></i> 查看
+                </button>
+            </td>
+        </tr>
+    `}).join('');
+        };
+
+        // 打开创建病历模态框
+        window.openCreateRecordModal = function() {
+            console.log("打开创建病历模态框");
+
+            // 清空选择
+            document.getElementById('patientSelect').innerHTML = '<option value="">-- 请选择患者 --</option>';
+
+            // 显示加载状态en
+            const select = document.getElementById('patientSelect');
+            const loadingOption = document.createElement('option');
+            loadingOption.value = '';
+            loadingOption.textContent = '加载患者列表中...';
+            select.appendChild(loadingOption);
+
+            // 加载患者列表
+            fetch('/doctor/api/patients/list')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('加载患者列表失败');
+                    }
+                    return response.json();
+                })
+                .then(patients => {
+                    // 清空选择框
+                    select.innerHTML = '<option value="">-- 请选择患者 --</option>';
+
+                    if (!patients || patients.length === 0) {
+                        const noPatientOption = document.createElement('option');
+                        noPatientOption.value = '';
+                        noPatientOption.textContent = '暂无患者数据';
+                        select.appendChild(noPatientOption);
+                        return;
+                    }
+
+                    // 添加患者选项
+                    patients.forEach(patient => {
+                        const option = document.createElement('option');
+                        option.value = patient.id;
+
+                        // 显示患者姓名（如果有的话）
+                        const displayName = patient.patientName
+                            ? `${patient.patientName} (ID: ${patient.id})`
+                            : `患者ID: ${patient.id}`;
+
+                        option.textContent = displayName;
+                        option.setAttribute('data-patient-name', patient.patientName || '');
+                        select.appendChild(option);
+                    });
+
+                    // 显示模态框
+                    new bootstrap.Modal(document.getElementById('createRecordModal')).show();
+                })
+                .catch(error => {
+                    console.error('加载患者列表失败:', error);
+                    select.innerHTML = '<option value="">加载失败，请重试</option>';
+
+                    // 仍然显示模态框
+                    new bootstrap.Modal(document.getElementById('createRecordModal')).show();
+                });
+        };
+
+        // 创建新病历
+        function createNewMedicalRecord() {
+            const patientSelect = document.getElementById('patientSelect');
+            const patientId = patientSelect.value;
+
+            if (!patientId) {
+                alert('请选择患者');
+                return;
+            }
+
+            // 显示加载状态
+            const createBtn = document.querySelector('#createRecordModal .btn-success');
+            const originalText = createBtn.innerHTML;
+            createBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>创建中...';
+            createBtn.disabled = true;
+
+            // 发送创建请求
+            fetch('/doctor/api/medical-records/create', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    patientId: parseInt(patientId)
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    // 恢复按钮状态
+                    createBtn.innerHTML = originalText;
+                    createBtn.disabled = false;
+
+                    if (data.success) {
+                        // 关闭创建模态框
+                        const createModal = bootstrap.Modal.getInstance(document.getElementById('createRecordModal'));
+                        if (createModal) {
+                            createModal.hide();
+                        }
+
+                        // 获取患者姓名用于显示
+                        const selectedOption = patientSelect.options[patientSelect.selectedIndex];
+                        const patientName = selectedOption.getAttribute('data-patient-name') || '';
+
+                        // 打开编辑模态框（使用新创建的病历ID）
+                        window.openEditModal(
+                            data.recordId,
+                            patientName,
+                            new Date().toISOString().split('T')[0] // 当前日期作为就诊日期
+                        );
+
+                        // 刷新病历列表（可选）
+                        setTimeout(() => {
+                            window.loadMedicalRecords();
+                        }, 1000);
+
+                    } else {
+                        alert('创建失败: ' + (data.message || '未知错误'));
+                    }
+                })
+                .catch(error => {a
+                    console.error('创建病历失败:', error);
+                    createBtn.innerHTML = originalText;
+                    createBtn.disabled = false;
+                    alert('创建失败，请检查网络连接');
+                });
+        }
+
+        /**
+         * 查看病历详情
+         * @param {number} id - 病历ID
+         */
+        window.viewRecordDetail = function (id) {
+            // 1. 获取模态框实例
+            const modalEl = document.getElementById('recordDetailModal');
+            const modal = new bootstrap.Modal(modalEl);
+
+            // 2. 显示模态框，并重置为加载状态
+            document.getElementById('modalLoading').style.display = 'block';
+            document.getElementById('modalContent').style.display = 'none';
+            modal.show();
+
+            // 3. 移除之前可能存在的费用详情部分
+            const existingPriceSection = document.getElementById('priceDetailSection');
+            if (existingPriceSection) {
+                existingPriceSection.remove();
+            }
+
+            // 4. 请求后端数据获取病历详情
+            fetch(`/doctor/api/medical-records/${id}`)
+                .then(response => {
+                    if (!response.ok) throw new Error('获取详情失败');
+                    return response.json();
+                })
+                .then(data => {
+                    // 5. 填充数据 (使用辅助函数处理空值)
+                    setText('detailVisitDate', data.visitDate);
+                    setText('detailDiagnosis', data.diagnosis);
+
+                    setText('detailChiefComplaint', data.chiefComplaint);
+                    setText('detailPresentIllness', data.presentIllness);
+                    setText('detailPastIllness', data.pastIllness);
+                    setText('detailPhysicalExam', data.physicalExamination);
+                    setText('detailAuxiliaryExam', data.auxiliaryExamination);
+
+                    // 治疗方案特殊处理：格式化为文本
+                    const plan = data.treatmentPlan ? formatTreatmentPlan(data.treatmentPlan).replace(/\n/g, '<br>') : '无';
+                    document.getElementById('detailTreatmentPlan').innerHTML = plan;
+
+                    // 6. 切换显示状态
+                    document.getElementById('modalLoading').style.display = 'none';
+                    document.getElementById('modalContent').style.display = 'block';
+
+                    // 7. ========== 新增：获取费用详情 ==========
+                    fetch(`/doctor/api/medical-records/${id}/price-detail`)
+                        .then(response => response.json())
+                        .then(priceData => {
+                            if (priceData && priceData.totalPrice) {
+                                // 创建费用详情HTML
+                                const priceHtml = `
+                            <div class="col-12 mt-3" id="priceDetailSection">
+                                <label class="form-label fw-bold text-success">
+                                    <i class="fas fa-money-bill-wave me-1"></i>费用详情
+                                </label>
+                                <div class="p-3 border border-success rounded bg-light">
+                                    <div class="row">
+                                        <div class="col-md-3">
+                                            <small class="text-muted">挂号费：</small>
+                                            <div class="fw-bold">¥${priceData.registrationFee || '0.00'}</div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <small class="text-muted">药费：</small>
+                                            <div class="fw-bold">¥${priceData.medicineFee || '0.00'}</div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <small class="text-muted">检查费：</small>
+                                            <div class="fw-bold">¥${priceData.examinationFee || '0.00'}</div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <small class="text-muted">总金额：</small>
+                                            <div class="fw-bold text-danger h5">¥${priceData.totalPrice || '0.00'}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+
+                                // 插入到详情内容中（治疗方案之后）
+                                const modalContent = document.getElementById('modalContent');
+                                modalContent.insertAdjacentHTML('beforeend', priceHtml);
+                            }
+                        })
+                        .catch(error => {
+                            console.error('获取费用详情失败:', error);
+                            // 可以选择显示一个提示，但不影响主流程
+                            console.log('费用详情获取失败，但不影响病历详情显示');
+                        });
+                })
+                .catch(error => {
+                    console.error(error);
+                    document.getElementById('modalLoading').innerHTML = `<p class="text-danger">无法加载数据，请稍后重试。</p>`;
+                });
+        };
+
+        /**
+         * 打开开药页面
+         */
+        window.openPrescriptionPage = function() {
+            // 1. 获取当前病历ID
+            const recordId = document.getElementById('editRecordId').value;
+            if (!recordId) {
+                alert('请先创建或选择一份病历后再进行开药操作');
+                return;
+            }
+
+            // 2. 收集当前医生已经填写、但还未手动点击“保存修改”的文字信息
+            const currentRecordData = {
+                id: recordId,
+                diagnosis: document.getElementById('editDiagnosis').value,
+                chiefComplaint: document.getElementById('editChiefComplaint').value,
+                presentIllness: document.getElementById('editPresentIllness').value,
+                pastIllness: document.getElementById('editPastIllness').value,
+                physicalExamination: document.getElementById('editPhysicalExam').value,
+                auxiliaryExamination: document.getElementById('editAuxiliaryExam').value
+            };
+
+            // 3. 在跳转前自动发起一次无感保存
+            fetch('/doctor/api/medical-records/update', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(currentRecordData)
+            })
+                .then(response => {
+                    if (response.ok) {
+                        console.log('跳转前自动保存文本成功');
+                        // 4. 自动保存成功后，再安全地打开新标签页去开药
+                        window.open('/doctor/prescription/' + recordId, '_blank');
+                    } else {
+                        // 如果自动保存失败，提示医生，防止数据丢失
+                        if (confirm('暂存当前病历文本失败，是否仍要跳转到开药页面？(可能会丢失当前填写的文字)')) {
+                            window.open('/doctor/prescription/' + recordId, '_blank');
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('自动保存出错:', error);
+                    if (confirm('网络错误，暂存文本失败。是否仍要继续去开药？')) {
+                        window.open('/doctor/prescription/' + recordId, '_blank');
+                    }
+                });
+        };
+
+        /**
+         * 开药页面保存后，跨窗口无感局部同步函数
+         * 作用：不刷新页面，只更新当前编辑模态框里的“治疗方案”文本框，并刷新底层列表数据
+         * @param {number} recordId - 当前病历ID
+         */
+        window.syncTreatmentPlanFromPrescription = function(recordId) {
+            console.log("收到处方页保存成功的信号，开始无感局部同步，病历ID:", recordId);
+
+            // 1. 如果医生已经把编辑模态框关闭了，则无需同步文本框
+            const currentEditId = document.getElementById('editRecordId') ? document.getElementById('editRecordId').value : null;
+
+            if (currentEditId && String(currentEditId) === String(recordId)) {
+                // 2. 发起异步请求，只获取这份病历的最新治疗方案数据
+                fetch('/doctor/api/medical-records/' + recordId)
+                    .then(response => {
+                        if (!response.ok) throw new Error('网络请求异常');
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data && data.treatmentPlan) {
+                            const treatmentPlanTextarea = document.getElementById('editTreatmentPlan');
+                            if (treatmentPlanTextarea) {
+                                // 3. 仅仅精准覆盖“治疗方案”这一个文本框，医生正在输入的现病史、主诉等完全不受影响
+                                treatmentPlanTextarea.value = formatTreatmentPlan(data.treatmentPlan);
+                                console.log("治疗方案文本框局部同步成功！");
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('局部同步治疗方案文本失败:', error);
+                    });
+            }
+
+            // 4. 静默局部刷新底层的病历列表表格，保证表格里的诊断结果等也是最新的
+            if (typeof window.loadMedicalRecords === 'function') {
+                // 由于你的主页面渲染列表是用 fetch 异步渲染的，直接调用它只刷新表格，不刷新网页
+                fetch('/doctor/api/medical-records')
+                    .then(res => res.json())
+                    .then(data => window.renderMedicalRecordsTable(data))
+                    .catch(err => console.error("静默刷新列表失败:", err));
+            }
+        };
+
+        /**
+         * 实现"修改"功能 (关键逻辑)
+         * 功能：接收列表传递的基础信息 -> 填充模态框 -> 显示 -> (可选)后台获取更详细信息
+         */
+        window.openEditModal = function (id, patientName, visitDate) {
+            console.log('正在打开编辑模态框，ID:', id);
+
+            // 1. 获取模态框元素
+            const modalEl = document.getElementById('recordEditModal');
+            if (!modalEl) {
+                alert('错误：找不到编辑模态框 (recordEditModal)');
+                return;
+            }
+
+            // 2. 先清空旧数据
+            const editForm = document.getElementById('editRecordForm');
+            if (editForm) {
+                editForm.reset();
+            }
+
+            // 3. 立即回显基础信息
+            document.getElementById('editRecordId').value = id;
+
+            // 如果传了名字，就填名字；没传则留空
+            if (patientName) {
+                document.getElementById('editPatientName').value = patientName;
+            }
+            if (visitDate) {
+                document.getElementById('editVisitDate').value = visitDate;
+            } else {
+                // 如果没有传入就诊日期，使用今天
+                const today = new Date().toISOString().split('T')[0];
+                document.getElementById('editVisitDate').value = today;
+            }
+
+            // 4. 显示模态框
+            if (typeof bootstrap !== 'undefined') {
+                const modalInstance = new bootstrap.Modal(modalEl);
+                modalInstance.show();
+            } else {
+                alert('Bootstrap 未加载，无法显示模态框');
+                return;
+            }
+
+            // 5. 请求后端获取该病历的完整详情
+            // 如果是新创建的病历，后端可能返回空数据，这是正常的
+            fetch('/doctor/api/medical-records/' + id)
+                .then(response => {
+                    if (!response.ok) {
+                        // 对于新创建的病历，如果404，我们仍然继续
+                        console.log('病历详情可能为空，继续使用默认值');
+                        return null;
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data) {
+                        // 如果后端有数据，用后端数据填充
+                        if (data.patientName) {
+                            document.getElementById('editPatientName').value = data.patientName;
+                        }
+                        if (data.visitDate) {
+                            document.getElementById('editVisitDate').value = data.visitDate;
+                        }
+
+                        document.getElementById('editDiagnosis').value = data.diagnosis || '';
+                        document.getElementById('editChiefComplaint').value = data.chiefComplaint || '';
+                        document.getElementById('editPresentIllness').value = data.presentIllness || '';
+                        document.getElementById('editPastIllness').value = data.pastIllness || '';
+                        document.getElementById('editPhysicalExam').value = data.physicalExamination || '';
+                        document.getElementById('editAuxiliaryExam').value = data.auxiliaryExamination || '';
+
+                        // 治疗方案字段：格式化为文本显示
+                        const treatmentPlan = data.treatmentPlan || '';
+                        document.getElementById('editTreatmentPlan').value = formatTreatmentPlan(treatmentPlan);
+                    }
+                    // 如果没有数据（新病历），保持已设置的基础信息
+                })
+                .catch(error => {
+                    console.error('获取详情失败（可能是新病历）:', error);
+                    // 对于新创建的病历，获取详情失败是正常的
+                });
+        };
+
+        /**
+         * 保存修改
+         */
+        window.saveRecordChanges = function () {
+            // 1. 收集表单数据
+            const recordData = {
+                id: document.getElementById('editRecordId').value,
+                diagnosis: document.getElementById('editDiagnosis').value,
+                chiefComplaint: document.getElementById('editChiefComplaint').value,
+                presentIllness: document.getElementById('editPresentIllness').value,
+                pastIllness: document.getElementById('editPastIllness').value,
+                physicalExamination: document.getElementById('editPhysicalExam').value,
+                auxiliaryExamination: document.getElementById('editAuxiliaryExam').value,
+                // 注意：保存的是文本框中的文本内容
+                treatmentPlan: document.getElementById('editTreatmentPlan').value
+            };
+
+            // 2. 发送 AJAX 请求
+            fetch('/doctor/api/medical-records/update', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(recordData)
+            })
+                .then(response => {
+                    if (response.ok) {
+                        // 3. 成功逻辑
+                        alert('保存成功！');
+
+                        // 关闭模态框
+                        const modalEl = document.getElementById('recordEditModal');
+                        const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                        modalInstance.hide();
+
+                        // 4. 局部刷新列表 (核心步骤)
+                        window.loadMedicalRecords();
+                    } else {
+                        alert('保存失败，请重试。');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('网络错误，无法保存。');
+                });
+        };
+
+        /**
+         * 模糊查询
+         */
+        // 1. 防抖变量
+        if (typeof searchTimeout === 'undefined') {
+            var searchTimeout = null;
+        }
+
+        // 2. 核心搜索/加载函数 (绑定到输入框的 onkeyup)
+        window.filterMedicalRecordsTable = function() {
+            const input = document.getElementById("searchRecordInput");
+            const keyword = input.value;
+
+            // 清除之前的定时器 (防止输入过快发送多次请求)
+            clearTimeout(searchTimeout);
+
+            // 设置延时 300ms 后发送请求
+            searchTimeout = setTimeout(() => {
+                fetchMedicalRecords(keyword);
+            }, 300);
+        };
+
+        // 3. 请求后端数据
+        function fetchMedicalRecords(keyword = '') {
+            fetch(`/doctor/api/medical-records?name=${encodeURIComponent(keyword)}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('网络响应异常');
+                    }
+                    // 关键点：必须先 return response.json() 传给下一个 .then
+                    return response.json();
+                })
+                .then(data => {
+                    // 此时 data 才有定义，调用同一个渲染函数
+                    window.renderMedicalRecordsTable(data);
+                })
+                .catch(error => {
+                    console.error('搜索出错:', error);
+                    const tableBody = document.getElementById('medicalRecordsTableBody');
+                    if (tableBody) {
+                        tableBody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">搜索失败</td></tr>';
+                    }
+                });
+        }
+
+
+        // 全局变量存储所有检查项目配置数据
+        var allExamItems = [];
+        var currentRecordExistingItemIds = [];
+
+        // 打开开检查模态框
+        window.openPrescribeModal = function() {
+            // 获取当前正在编辑的 recordId
+            const recordId = document.getElementById('editRecordId').value;
+            if (!recordId) {
+                alert("未找到病历ID");
+                return;
+            }
+
+            // 并行请求：1. 所有检查项目列表 2. 当前病历已开的检查
+            Promise.all([
+                fetch('/doctor/api/examinations/items').then(res => res.json()),
+                fetch(`/doctor/api/examinations/list?recordId=${recordId}`).then(res => res.json())
+            ]).then(([allItems, existingExams]) => {
+                allExamItems = allItems;
+
+                // 提取已存在的项目ID
+                currentRecordExistingItemIds = existingExams.map(ex => ex.examinationItemId);
+
+                // 重置并显示模态框
+                const container = document.getElementById('examItemsContainer');
+                container.innerHTML = '';
+                addExamRow(); // 添加第一行
+
+                // 渲染已开立的检查项目列表
+                renderExistingExams(existingExams);
+
+                // 设置模态框隐藏时的回调，刷新辅助检查文本框
+                const modalEl = document.getElementById('prescribeModal');
+                modalEl.addEventListener('hidden.bs.modal', function() {
+                    // 模态框关闭后，刷新编辑模态框中的辅助检查内容
+                    fetch(`/doctor/api/medical-records/${recordId}`)
+                        .then(r => r.json())
+                        .then(data => {
+                            document.getElementById('editAuxiliaryExam').value = data.auxiliaryExamination;
+                        });
+                });
+
+                new bootstrap.Modal(modalEl).show();
+            }).catch(err => {
+                console.error("加载数据失败", err);
+                alert("无法加载检查项目数据");
+            });
+        }
+
+        // 添加一行
+        function addExamRow() {
+            const container = document.getElementById('examItemsContainer');
+            const index = container.children.length;
+
+            // 提取所有唯一的类型
+            const types = [...new Set(allExamItems.map(item => item.examinationType))];
+            let typeOptions = '<option value="">-- 选择检查类型 --</option>';
+            types.forEach(t => {
+                typeOptions += `<option value="${t}">${t}</option>`;
+            });
+
+            const rowHtml = `
+            <div class="row g-2 mb-2 exam-row">
+                <div class="col-md-5">
+                    <select class="form-select type-select" onchange="handleTypeChange(this)">
+                        ${typeOptions}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <select class="form-select item-select" disabled>
+                        <option value="">-- 先选择类型 --</option>
+                    </select>
+                </div>
+                <div class="col-md-1 d-grid">
+                    ${index > 0 ? `<button type="button" class="btn btn-outline-danger" onclick="this.closest('.row').remove()"><i class="fas fa-trash"></i></button>` : ''}
+                </div>
+            </div>
+        `;
+            container.insertAdjacentHTML('beforeend', rowHtml);
+        }
+
+        // 级联处理：类型改变 -> 更新项目下拉框
+        function handleTypeChange(selectElement) {
+            const type = selectElement.value;
+            // 找到同一行的 item-select
+            const row = selectElement.closest('.exam-row');
+            const itemSelect = row.querySelector('.item-select');
+
+            itemSelect.innerHTML = '<option value="">-- 请选择项目 --</option>';
+
+            if (type) {
+                // 筛选出该类型的项目
+                const items = allExamItems.filter(item => item.examinationType === type);
+
+                items.forEach(item => {
+                    // 检查该项目是否已存在
+                    const isPrescribed = currentRecordExistingItemIds.includes(item.id);
+
+                    const option = document.createElement('option');
+                    option.value = item.id;
+                    // 如果已开，添加标记并禁用
+                    if (isPrescribed) {
+                        option.textContent = item.examinationItem + " (已开)";
+                        option.disabled = true;
+                    } else {
+                        option.textContent = `${item.examinationItem} (￥${item.price});`;
+                    }
+                    itemSelect.appendChild(option);
+                });
+                itemSelect.disabled = false;
+            } else {
+                itemSelect.disabled = true;
+            }
+        }
+
+        /// 提交开单
+        function submitPrescription() {
+            const itemSelects = document.querySelectorAll('#examItemsContainer .item-select');
+            const selectedIds = [];
+
+            itemSelects.forEach(select => {
+                if (select.value) {
+                    selectedIds.push(parseInt(select.value));
+                }
+            });
+
+            // 获取当前正在编辑的病历ID
+            const recordId = document.getElementById('editRecordId').value;
+
+            fetch('/doctor/api/examinations/prescribe', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    recordId: recordId,
+                    itemIds: selectedIds
+                })
+            })
+                .then(res => {
+                    if (res.ok) {
+                        return res.text();
+                    } else {
+                        throw new Error('开单失败');
+                    }
+                })
+                .then(message => {
+                    alert(message);
+
+                    // 关闭开单模态框
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('prescribeModal'));
+                    if (modal) modal.hide();
+
+                    // 强制重新加载病历数据，清空并重新上传
+                    if (recordId) {
+                        fetch(`/doctor/api/medical-records/${recordId}`)
+                            .then(r => r.json())
+                            .then(data => {
+                                // 清空文本框然后重新设置
+                                document.getElementById('editAuxiliaryExam').value = '';
+                                // 短暂延迟确保清空生效
+                                setTimeout(() => {
+                                    document.getElementById('editAuxiliaryExam').value = data.auxiliaryExamination || '';
+                                }, 10);
+                            })
+                            .catch(err => {
+                                console.error('获取病历数据失败:', err);
+                                document.getElementById('editAuxiliaryExam').value = '';
+                            });
+                    }
+
+                    // 重新加载已开立的检查项目
+                    loadExistingExams(recordId);
+                    // 刷新下拉框中的项目状态
+                    refreshExamSelects();
+                })
+                .catch(err => {
+                    console.error("开单失败:", err);
+                    alert(err.message || "网络错误，请稍后重试");
+                });
+        }
+
+        // 渲染已开立的检查项目列表
+        function renderExistingExams(exams) {
+            const container = document.getElementById('existingExamsList');
+            if (!container) return;
+
+            if (!exams || exams.length === 0) {
+                container.innerHTML = `
+            <div class="text-center text-muted py-3">
+                <i class="fas fa-inbox fa-lg me-2"></i>
+                暂无已开立的检查项目
+            </div>
+        `;
+                return;
+            }
+
+            let html = '';
+            exams.forEach(exam => {
+                const isCompleted = exam.status === '已完成';
+                const badgeClass = isCompleted ? 'bg-success' : 'bg-warning text-dark';
+                const badgeText = isCompleted ? '已完成' : '待完成';
+                const disableDelete = isCompleted ? 'disabled' : '';
+                const deleteTooltip = isCompleted ? 'title="已完成项目不可删除"' : '';
+
+                html += `
+            <div class="d-flex justify-content-between align-items-center p-2 border rounded bg-light">
+                <div>
+                    <span class="fw-bold">${exam.examinationItemName || '未知项目'}</span>
+                    <span class="badge ${badgeClass} ms-2">${badgeText}</span>
+                    ${exam.examinationResult ? `<div class="text-muted small mt-1">结果: ${exam.examinationResult}</div>` : ''}
+                </div>
+                <div>
+                    <button class="btn btn-sm btn-outline-danger"
+                            onclick="deleteExamItem(${exam.id})"
+                            ${disableDelete}
+                            ${deleteTooltip}>
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        // 删除检查项目
+        function deleteExamItem(examId) {
+            if (!confirm('确定要删除这个检查项目吗？')) {
+                return;
+            }
+
+            fetch(`/doctor/api/examinations/${examId}`, {
+                method: 'DELETE',
+                headers: {'Content-Type': 'application/json'}
+            })
+                .then(res => {
+                    if (res.ok) {
+                        return res.text();
+                    }
+                    throw new Error('删除失败');
+                })
+                .then(message => {
+                    alert(message);
+                    // 重新加载已开立的检查项目
+                    const recordId = document.getElementById('editRecordId').value;
+                    loadExistingExams(recordId);
+                    // 刷新下拉框中的项目状态
+                    refreshExamSelects();
+                })
+                .catch(error => {
+                    console.error("删除失败:", error);
+                    alert(error.message || "删除失败");
+                });
+        }
+
+        // 加载已开立的检查项目
+        function loadExistingExams(recordId) {
+            if (!recordId) return;
+
+            fetch(`/doctor/api/examinations/list?recordId=${recordId}`)
+                .then(res => res.json())
+                .then(exams => {
+                    // 存储已存在的项目ID，用于下拉框禁用
+                    currentRecordExistingItemIds = exams.map(ex => ex.examinationItemId);
+                    // 渲染已开立的检查项目列表
+                    renderExistingExams(exams);
+                })
+                .catch(err => {
+                    console.error("加载已开立检查项目失败:", err);
+                    renderExistingExams([]);
+                });
+        }
+
+        // 刷新检查项目下拉框（重新构建）
+        function refreshExamSelects() {
+            const typeSelects = document.querySelectorAll('#examItemsContainer .type-select');
+
+            typeSelects.forEach(select => {
+                const type = select.value;
+                const row = select.closest('.exam-row');
+                const itemSelect = row.querySelector('.item-select');
+
+                // 如果已经选择了类型，则重新填充项目
+                if (type) {
+                    handleTypeChange(select);
+                }
+            });
+        }
+
+        // 修改 openPrescribeModal 函数，添加加载已开立检查项目的逻辑
+        window.openPrescribeModal = function() {
+            // 获取当前正在编辑的 recordId
+            const recordId = document.getElementById('editRecordId').value;
+            if (!recordId) {
+                alert("未找到病历ID");
+                return;
+            }
+
+            // 并行请求：1. 所有检查项目列表 2. 当前病历已开的检查
+            Promise.all([
+                fetch('/doctor/api/examinations/items').then(res => res.json()),
+                fetch(`/doctor/api/examinations/list?recordId=${recordId}`).then(res => res.json())
+            ]).then(([allItems, existingExams]) => {
+                allExamItems = allItems;
+
+                // 提取已存在的项目ID
+                currentRecordExistingItemIds = existingExams.map(ex => ex.examinationItemId);
+
+                // 重置并显示模态框
+                const container = document.getElementById('examItemsContainer');
+                container.innerHTML = '';
+                addExamRow(); // 添加第一行
+
+                // 渲染已开立的检查项目列表
+                renderExistingExams(existingExams);
+
+                new bootstrap.Modal(document.getElementById('prescribeModal')).show();
+            }).catch(err => {
+                console.error("加载数据失败", err);
+                alert("无法加载检查项目数据");
+            });
+        }
+
+        // 修改 handleTypeChange 函数，使用最新的 currentRecordExistingItemIds
+        function handleTypeChange(selectElement) {
+            const type = selectElement.value;
+            // 找到同一行的 item-select
+            const row = selectElement.closest('.exam-row');
+            const itemSelect = row.querySelector('.item-select');
+
+            itemSelect.innerHTML = '<option value="">-- 请选择项目 --</option>';
+
+            if (type) {
+                // 筛选出该类型的项目
+                const items = allExamItems.filter(item => item.examinationType === type);
+
+                items.forEach(item => {
+                    // 检查该项目是否已存在（使用最新的 ID 列表）
+                    const isPrescribed = currentRecordExistingItemIds.includes(item.id);
+
+                    const option = document.createElement('option');
+                    option.value = item.id;
+                    // 如果已开，添加标记并禁用
+                    if (isPrescribed) {
+                        option.textContent = item.examinationItem + " (已开)";
+                        option.disabled = true;
+                    } else {
+                        option.textContent = `${item.examinationItem} (￥${item.price});`;
+                    }
+                    itemSelect.appendChild(option);
+                });
+                itemSelect.disabled = false;
+            } else {
+                itemSelect.disabled = true;
+            }
+        }
+
+        // 提交开单
+        function submitPrescription() {
+            const itemSelects = document.querySelectorAll('#examItemsContainer .item-select');
+            const selectedIds = [];
+
+            itemSelects.forEach(select => {
+                if (select.value) {
+                    selectedIds.push(parseInt(select.value));
+                }
+            });
+
+            // 获取当前正在编辑的病历ID
+            const recordId = document.getElementById('editRecordId').value;
+
+            if (!recordId) {
+                alert("未找到病历ID");
+                return;
+            }
+
+            // 显示加载状态
+            const submitBtn = document.querySelector('#prescribeModal .btn-success');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 处理中...';
+            submitBtn.disabled = true;
+
+            fetch('/doctor/api/examinations/prescribe', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    recordId: recordId,
+                    itemIds: selectedIds
+                })
+            })
+                .then(res => {
+                    if (res.ok) {
+                        return res.text();
+                    } else {
+                        throw new Error('开单失败');
+                    }
+                })
+                .then(message => {
+                    alert(message);
+
+                    // 恢复按钮状态
+                    submitBtn.innerHTML = originalText;
+                    submitBtn.disabled = false;
+
+                    // 关闭开单模态框
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('prescribeModal'));
+                    if (modal) modal.hide();
+
+                    // 强制刷新辅助检查栏
+                    forceRefreshAuxiliaryExam(recordId);
+
+                    // 重新加载已开立的检查项目
+                    loadExistingExams(recordId);
+                    // 刷新下拉框中的项目状态
+                    refreshExamSelects();
+                })
+                .catch(err => {
+                    console.error("开单失败:", err);
+                    alert(err.message || "网络错误，请稍后重试");
+                    // 恢复按钮状态
+                    submitBtn.innerHTML = originalText;
+                    submitBtn.disabled = false;
+                });
+        }
+
+        // 强制刷新辅助检查栏
+        function forceRefreshAuxiliaryExam(recordId) {
+            if (!recordId) return;
+
+            // 清空当前显示
+            document.getElementById('editAuxiliaryExam').value = '';
+
+            // 从后端获取最新数据
+            fetch(`/doctor/api/medical-records/${recordId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('获取数据失败');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // 设置新的辅助检查内容
+                    const auxiliaryExam = data.auxiliaryExamination || '';
+                    document.getElementById('editAuxiliaryExam').value = auxiliaryExam;
+
+                    // 如果为空，显示提示
+                    if (!auxiliaryExam.trim()) {
+                        console.log('辅助检查栏已清空');
+                    }
+                })
+                .catch(error => {
+                    console.error('强制刷新失败:', error);
+                });
+        }
+    </script>
+</div>

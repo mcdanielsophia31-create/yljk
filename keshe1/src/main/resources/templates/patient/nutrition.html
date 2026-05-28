@@ -1,0 +1,1407 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>饮食建议 - 医疗健康管理系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <style>
+        /* 明确定义颜色变量 */
+        :root {
+            --level-1: #FF8A8A; /* 盐 - 柔和的红色 */
+            --level-2: #FFD166; /* 油 - 黄色 */
+            --level-3: #4ECDC4; /* 奶豆坚果 - 青绿色 */
+            --level-4: #45B7D1; /* 动物性食物 - 蓝色 */
+            --level-5: #9D4EDD; /* 蔬菜水果 - 紫色 */
+            --level-6: #FF9E6D; /* 谷薯类 - 橙色 */
+        }
+
+        body {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            margin: 0;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        .main-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .page-header {
+            background: white;
+            border-radius: 20px;
+            padding: 30px 40px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            margin-bottom: 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .page-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 6px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .page-header h1 {
+            font-size: 36px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+        }
+
+        .page-header p {
+            font-size: 16px;
+            color: #64748b;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* 金字塔容器 - 改进设计 */
+        .pyramid-container {
+            position: relative;
+            width: 100%;
+            height: 500px;
+            margin: 30px auto;
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            overflow: visible;
+        }
+
+        /* 金字塔层级样式 - 梯形设计 */
+        .pyramid-layer {
+            position: absolute;
+            left: 50%;
+            transform-origin: bottom center;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            opacity: 0;
+            animation: layerFadeIn 0.8s ease-out forwards;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transform: translateX(-50%);
+            /* 移除圆角和clip-path */
+            border-radius: 0;
+        }
+
+        /* 第6层：谷薯类（底层）- 梯形 */
+        .pyramid-layer.layer-6 {
+            width: 1020px;
+            height: 120px;
+            background: linear-gradient(145deg, var(--level-6) 0%, color-mix(in srgb, var(--level-6), #ffffff 15%) 100%);
+            animation-delay: 0.1s;
+            z-index: 6;
+            bottom: 0;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            /* 精准计算：让斜边和第5层完全重合 */
+            clip-path: polygon(10% 0%, 90% 0%, 100% 100%, 0% 100%);
+        }
+
+        /* 第5层：蔬菜水果 - 梯形 */
+        .pyramid-layer.layer-5 {
+            width: 820px; /* 调整宽度：让斜边和第6层对齐 */
+            height: 100px;
+            background: linear-gradient(145deg, var(--level-5) 0%, color-mix(in srgb, var(--level-5), #ffffff 15%) 100%);
+            animation-delay: 0.2s;
+            z-index: 5;
+            bottom: 120px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            /* 匹配第6层斜边角度 */
+            clip-path: polygon(12.5% 0%, 87.5% 0%, 100% 100%, 0% 100%);
+        }
+
+        /* 第4层：动物性食物 - 梯形（拉长一点点：高度80→90px） */
+        .pyramid-layer.layer-4 {
+            width: 620px; /* 保持宽度，调整clip-path */
+            height: 100px; /* 原80px → 拉长10px */
+            background: linear-gradient(145deg, var(--level-4) 0%, color-mix(in srgb, var(--level-4), #ffffff 15%) 100%);
+            animation-delay: 0.3s;
+            z-index: 4;
+            bottom: 220px; /* 5层bottom(120)+5层height(100)=220，不变 */
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            /* 匹配上层斜边角度 */
+            clip-path: polygon(20% 0%, 80% 0%, 100% 100%, 0% 100%);
+        }
+
+        /* 第3层：奶豆坚果 - 梯形（拉长一点点：高度60→70px） */
+        .pyramid-layer.layer-3 {
+            width: 380px;
+            height: 80px;
+            background: linear-gradient(145deg, var(--level-3) 0%, color-mix(in srgb, var(--level-3), #ffffff 15%) 100%);
+            animation-delay: 0.4s;
+            z-index: 3;
+            bottom: 310px; /* 原300px → 4层bottom(220)+4层新高度(90)=310 */
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            /* 匹配上层斜边角度 */
+            clip-path: polygon(26.9% 0%, 73.1% 0%, 100% 100%, 0% 100%);
+        }
+
+        /* 第2层：油 - 梯形 */
+        .pyramid-layer.layer-2 {
+            width: 180px;
+            height: 60px;
+            background: linear-gradient(145deg, var(--level-2) 0%, color-mix(in srgb, var(--level-2), #ffffff 15%) 100%);
+            animation-delay: 0.5s;
+            z-index: 2;
+            bottom: 380px; /* 原360px → 3层bottom(310)+3层新高度(70)=380 */
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            /* 匹配上层斜边角度 */
+            clip-path: polygon(32.1% 0%, 67.9% 0%, 100% 100%, 0% 100%);
+        }
+
+        /* 第1层：盐（顶层）- 三角形 */
+        .pyramid-layer.layer-1 {
+            width: 70px;
+            height: 50px;
+            background: linear-gradient(145deg, var(--level-1) 0%, color-mix(in srgb, var(--level-1), #ffffff 15%) 100%);
+            animation-delay: 0.6s;
+            z-index: 1;
+            bottom: 430px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            /* 三角形顶点精准对齐下层中线 */
+            clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+        }
+
+
+        /* 金字塔内容样式 - 改进设计 */
+        .layer-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: white;
+            width: 90%;
+            z-index: 10;
+            pointer-events: none;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.4);
+            padding: 8px;
+            border-radius: 6px;
+            background: rgba(0, 0, 0, 0.15);
+            backdrop-filter: blur(5px);
+        }
+
+        .layer-title {
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 3px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .layer-desc {
+            font-size: 11px;
+            margin-bottom: 4px;
+            opacity: 0.95;
+            font-weight: 500;
+            line-height: 1.3;
+        }
+
+        .layer-amount {
+            font-size: 11px;
+            font-weight: 600;
+            background: rgba(255, 255, 255, 0.25);
+            padding: 3px 10px;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            display: inline-block;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        }
+
+        /* 动画效果 */
+        @keyframes layerFadeIn {
+            from {
+                opacity: 0;
+                transform: translateX(-50%) translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        }
+
+        @keyframes layerPulse {
+            0%, 100% {
+                transform: translateX(-50%) scale(1);
+                filter: brightness(1);
+            }
+            50% {
+                transform: translateX(-50%) scale(1.03);
+                filter: brightness(1.2);
+            }
+        }
+
+        /* 悬停效果 */
+        .pyramid-layer:hover {
+            filter: brightness(1.15);
+            transform: translateX(-50%) scale(1.02) !important;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+            z-index: 20 !important;
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        /* 选中状态 */
+        .pyramid-layer.active {
+            filter: brightness(1.25);
+            transform: translateX(-50%) scale(1.03) !important;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+            z-index: 21 !important;
+            border-color: rgba(255, 255, 255, 0.8);
+        }
+
+        /* 金字塔标签 - 改进设计 */
+        .pyramid-labels {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+
+        .pyramid-label {
+            text-align: center;
+            min-width: 85px;
+            transition: all 0.3s ease;
+            padding: 10px;
+            border-radius: 12px;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .pyramid-label:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+        }
+
+        .label-number {
+            width: 32px;
+            height: 32px;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 8px;
+            font-weight: bold;
+            font-size: 16px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .label-text {
+            font-size: 13px;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 3px;
+        }
+
+        .label-desc {
+            font-size: 11px;
+            color: #64748b;
+            line-height: 1.3;
+        }
+
+        /* 为不同标签设置不同颜色 */
+        .pyramid-label:nth-child(1) .label-number { background: linear-gradient(135deg, var(--level-1) 0%, #FF6B6B 100%); }
+        .pyramid-label:nth-child(2) .label-number { background: linear-gradient(135deg, var(--level-2) 0%, #FFA726 100%); }
+        .pyramid-label:nth-child(3) .label-number { background: linear-gradient(135deg, var(--level-3) 0%, #26A69A 100%); }
+        .pyramid-label:nth-child(4) .label-number { background: linear-gradient(135deg, var(--level-4) 0%, #42A5F5 100%); }
+        .pyramid-label:nth-child(5) .label-number { background: linear-gradient(135deg, var(--level-5) 0%, #AB47BC 100%); }
+        .pyramid-label:nth-child(6) .label-number { background: linear-gradient(135deg, var(--level-6) 0%, #FF7043 100%); }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .pyramid-container {
+                height: 450px;
+            }
+
+            .pyramid-layer.layer-6 {
+                width: 330px;
+                height: 100px;
+                bottom: 0;
+                clip-path: polygon(25% 0%, 75% 0%, 100% 100%, 0% 100%);
+            }
+
+            .pyramid-layer.layer-5 {
+                width: 260px;
+                height: 85px;
+                bottom: 100px;
+                clip-path: polygon(25% 0%, 75% 0%, 100% 100%, 0% 100%);
+            }
+
+            .pyramid-layer.layer-4 {
+                width: 200px;
+                height: 70px;
+                bottom: 185px;
+                clip-path: polygon(25% 0%, 75% 0%, 100% 100%, 0% 100%);
+            }
+
+            .pyramid-layer.layer-3 {
+                width: 140px;
+                height: 55px;
+                bottom: 255px;
+                clip-path: polygon(25% 0%, 75% 0%, 100% 100%, 0% 100%);
+            }
+
+            .pyramid-layer.layer-2 {
+                width: 100px;
+                height: 40px;
+                bottom: 310px;
+                clip-path: polygon(25% 0%, 75% 0%, 100% 100%, 0% 100%);
+            }
+
+            .pyramid-layer.layer-1 {
+                width: 50px;
+                height: 30px;
+                bottom: 350px;
+                clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+            }
+
+            .layer-content {
+                padding: 6px;
+                width: 85%;
+            }
+
+            .layer-title {
+                font-size: 12px;
+            }
+
+            .layer-desc {
+                font-size: 10px;
+            }
+
+            .layer-amount {
+                font-size: 10px;
+                padding: 2px 8px;
+            }
+
+            .pyramid-labels {
+                gap: 15px;
+            }
+
+            .pyramid-label {
+                min-width: 70px;
+                padding: 8px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .pyramid-container {
+                height: 380px;
+            }
+
+            .pyramid-layer.layer-6 {
+                width: 240px;
+                height: 80px;
+                bottom: 0;
+                clip-path: polygon(25% 0%, 75% 0%, 100% 100%, 0% 100%);
+            }
+
+            .pyramid-layer.layer-5 {
+                width: 190px;
+                height: 65px;
+                bottom: 80px;
+                clip-path: polygon(25% 0%, 75% 0%, 100% 100%, 0% 100%);
+            }
+
+            .pyramid-layer.layer-4 {
+                width: 140px;
+                height: 50px;
+                bottom: 145px;
+                clip-path: polygon(25% 0%, 75% 0%, 100% 100%, 0% 100%);
+            }
+
+            .pyramid-layer.layer-3 {
+                width: 100px;
+                height: 40px;
+                bottom: 195px;
+                clip-path: polygon(25% 0%, 75% 0%, 100% 100%, 0% 100%);
+            }
+
+            .pyramid-layer.layer-2 {
+                width: 70px;
+                height: 30px;
+                bottom: 235px;
+                clip-path: polygon(25% 0%, 75% 0%, 100% 100%, 0% 100%);
+            }
+
+            .pyramid-layer.layer-1 {
+                width: 40px;
+                height: 25px;
+                bottom: 265px;
+                clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+            }
+
+            .layer-content {
+                padding: 4px;
+                width: 90%;
+                top: 35%;
+            }
+
+            .layer-title {
+                font-size: 10px;
+            }
+
+            .layer-desc {
+                font-size: 8px;
+                margin-bottom: 2px;
+            }
+
+            .layer-amount {
+                font-size: 8px;
+                padding: 2px 6px;
+            }
+
+            .pyramid-labels {
+                gap: 10px;
+                margin-top: 20px;
+            }
+
+            .pyramid-label {
+                min-width: 55px;
+                padding: 6px;
+            }
+
+            .label-number {
+                width: 24px;
+                height: 24px;
+                font-size: 12px;
+            }
+
+            .label-text {
+                font-size: 10px;
+            }
+
+            .label-desc {
+                font-size: 8px;
+            }
+        }
+
+        /* 金字塔区域标题样式 */
+        .pyramid-title {
+            text-align: center;
+            font-size: 24px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 15px;
+            position: relative;
+        }
+
+        .pyramid-title::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 3px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 2px;
+        }
+
+        /* 添加金字塔的投影效果 */
+        .pyramid-container::before {
+            content: '';
+            position: absolute;
+            bottom: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 300px;
+            height: 20px;
+            background: radial-gradient(ellipse at center, rgba(0,0,0,0.1) 0%, transparent 70%);
+            z-index: 0;
+        }
+
+        /* 详细信息卡片 */
+        .details-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-top: 60px;
+        }
+
+        .detail-card {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+            border-top: 4px solid;
+        }
+
+        .detail-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.12);
+        }
+
+        .detail-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .detail-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+        }
+
+        .detail-card h3 {
+            font-size: 20px;
+            font-weight: 700;
+            color: #1e293b;
+            margin: 0;
+        }
+
+        .detail-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .detail-list li {
+            padding: 12px 0;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 14px;
+            color: #475569;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .detail-list li:last-child {
+            border-bottom: none;
+        }
+
+        .detail-value {
+            font-weight: 600;
+            background: #f1f5f9;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 13px;
+        }
+
+        /* 饮水建议 */
+        .water-section {
+            background: linear-gradient(135deg, #e0f2ff 0%, #bae6fd 100%);
+            border-radius: 20px;
+            padding: 35px;
+            margin-top: 40px;
+            text-align: center;
+            border: 2px solid #7dd3fc;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .water-section::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, rgba(125, 211, 252, 0.2) 0%, transparent 70%);
+        }
+
+        .water-icon {
+            font-size: 56px;
+            color: #0ea5e9;
+            margin-bottom: 20px;
+            position: relative;
+            z-index: 1;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .water-amount {
+            font-size: 42px;
+            font-weight: 800;
+            color: #0369a1;
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .water-desc {
+            color: #0c4a6e;
+            font-size: 16px;
+            font-weight: 500;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* 新增样式 */
+        .list-group-item {
+            border-left: 3px solid #0d6efd;
+            margin-bottom: 5px;
+        }
+
+        .badge.bg-info {
+            background: linear-gradient(135deg, #0dcaf0 0%, #0b5ed7 100%);
+            padding: 8px 15px;
+            font-size: 14px;
+        }
+
+        .card.bg-light {
+            border: none;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        .btn-outline-primary:hover {
+            background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
+            color: white;
+        }
+
+        @media print {
+            .card-header, .btn, .pyramid-labels {
+                break-inside: avoid;
+            }
+
+            .water-section {
+                background: white !important;
+                border: 2px solid #7dd3fc;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="main-content">
+    <!-- 页面标题 -->
+    <div class="page-header animate__animated animate__fadeInDown">
+        <h1><i class="fas fa-utensils"></i> 个性化饮食建议</h1>
+        <p th:text="'为 ' + ${user.realName?:'患者'} + ' 量身定制的饮食方案'">为 患者 量身定制的饮食方案</p>
+    </div>
+
+    <!-- 患者健康信息 - 修复版 -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5><i class="fas fa-user-injured me-2"></i>健康档案信息</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <p><strong>姓名：</strong>
+                        <span th:text="${user.realName ?: '未设置'}" class="text-primary">
+                        [[${user.realName ?: '未设置'}]]
+                    </span>
+                    </p>
+                </div>
+                <div class="col-md-3">
+                    <p><strong>身高：</strong>
+                        <span th:if="${profile?.height != null}" th:text="${profile.height} + 'cm'" class="text-success">
+                        [[${profile?.height}]]cm
+                    </span>
+                        <span th:unless="${profile?.height != null}" class="text-muted">
+                        未记录
+                    </span>
+                    </p>
+                </div>
+                <div class="col-md-3">
+                    <p><strong>体重：</strong>
+                        <span th:if="${profile?.weight != null}" th:text="${profile.weight} + 'kg'" class="text-success">
+                        [[${profile?.weight}]]kg
+                    </span>
+                        <span th:unless="${profile?.weight != null}" class="text-muted">
+                        未记录
+                    </span>
+                    </p>
+                </div>
+                <div class="col-md-3">
+                    <p><strong>BMI：</strong>
+                        <span th:if="${profile?.bmi != null}" th:text="${profile.bmi}" class="text-success">
+                        [[${profile?.bmi}]]
+                    </span>
+                        <span th:unless="${profile?.bmi != null}" class="text-muted">
+                        未计算
+                    </span>
+                    </p>
+                </div>
+            </div>
+            <div class="row mt-2">
+                <div class="col-md-6">
+                    <p><strong>血压：</strong>
+                        <span th:if="${profile?.bloodPressure != null}" th:text="${profile.bloodPressure}" class="text-success">
+                        [[${profile?.bloodPressure}]]
+                    </span>
+                        <span th:unless="${profile?.bloodPressure != null}" class="text-muted">
+                        未记录
+                    </span>
+                    </p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>健康风险评估：</strong>
+                        <span th:if="${bloodPressureRisk != null}">
+                        <span th:if="${bloodPressureRisk == '高血压风险'}" class="badge bg-danger">
+                            高血压风险
+                        </span>
+                        <span th:if="${bloodPressureRisk == '未测量'}" class="badge bg-warning">
+                            未测量
+                        </span>
+                        <span th:if="${bloodPressureRisk == '正常'}" class="badge bg-success">
+                            正常
+                        </span>
+                    </span>
+                        <span th:if="${bloodPressureRisk == null}" class="badge bg-secondary">
+                        未评估
+                    </span>
+                    </p>
+                </div>
+            </div>
+
+            <!-- 如果有血压数据但健康档案没有记录 -->
+            <div th:if="${bloodPressureData != null and !bloodPressureData.isEmpty() and (profile?.bloodPressure == null or profile.bloodPressure == '未记录')}">
+                <div class="alert alert-info mt-3">
+                    <i class="fas fa-info-circle me-2"></i>
+                    系统检测到您有血压测量记录，但健康档案中未记录。
+                    <a th:href="@{/patient/profile}" class="alert-link">请完善您的健康档案</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+    <!-- 个性化饮食建议 -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5><i class="fas fa-heartbeat me-2"></i>个性化饮食建议</h5>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-warning" th:if="${bloodPressureRisk == '高血压风险'}">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <strong>高血压饮食提醒：</strong>根据您的血压状况，建议采用低盐、低脂饮食，控制钠摄入量。
+            </div>
+            <div class="alert alert-warning" th:if="${bmiRisk == '肥胖' or bmiRisk == '超重'}">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <strong>体重管理提醒：</strong>根据您的BMI指数，建议控制总热量摄入，增加运动量。
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <h6><i class="fas fa-apple-alt text-success me-2"></i>推荐食物</h6>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item" th:if="${bloodPressureRisk == '高血压风险'}">谷薯类：每天250-300g，推荐糙米、燕麦、红薯等全谷物杂粮，富含钾元素有助于降压</li>
+                        <li class="list-group-item" th:unless="${bloodPressureRisk == '高血压风险'}">谷薯类：每天250-300g，推荐糙米、燕麦、红薯等全谷物杂粮</li>
+                        <li class="list-group-item" th:if="${bloodPressureRisk == '高血压风险'}">蔬菜水果：每天300-500g蔬菜，深色蔬菜占1/2以上，如菠菜、西兰花、胡萝卜，富含钾元素有助降压</li>
+                        <li class="list-group-item" th:unless="${bloodPressureRisk == '高血压风险'}">蔬菜水果：每天300-500g蔬菜，深色蔬菜占1/2以上，如菠菜、西兰花、胡萝卜</li>
+                        <li class="list-group-item">动物性食物：每天120-200g，优选鱼类、禽肉，减少红肉摄入</li>
+                        <li class="list-group-item">奶豆坚果：每天300-500g奶制品，25-35g坚果，优选低脂奶制品</li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <h6><i class="fas fa-ban text-danger me-2"></i>饮食禁忌</h6>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item" th:if="${bloodPressureRisk == '高血压风险'}">严格控制盐摄入：每日<5g，避免腌制食品、咸菜、酱油等高钠调料</li>
+                        <li class="list-group-item" th:unless="${bloodPressureRisk == '高血压风险'}">适量控制盐摄入：每日<6g</li>
+                        <li class="list-group-item">减少饱和脂肪：避免肥肉、动物内脏、油炸食品</li>
+                        <li class="list-group-item" th:if="${bmiRisk == '肥胖' or bmiRisk == '超重'}">限制糖分：减少甜食、含糖饮料的摄入，控制总热量</li>
+                        <li class="list-group-item" th:unless="${bmiRisk == '肥胖' or bmiRisk == '超重'}">适量控制糖分：减少甜食、含糖饮料的摄入</li>
+                        <li class="list-group-item">避免酒精：特别是烈性酒</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <h6><i class="fas fa-utensils text-primary me-2"></i>每日饮食搭配建议</h6>
+                <div class="alert alert-info">
+                    <strong>早餐：</strong>燕麦粥 + 水煮蛋 + 牛奶 + 少量坚果<br>
+                    <strong>午餐：</strong>糙米饭 + 清蒸鱼 + 凉拌菠菜 + 紫菜蛋花汤<br>
+                    <strong>晚餐：</strong>红薯 + 蒸蛋羹 + 白灼菜心 + 蒸豆腐
+                </div>
+                <div class="alert alert-light" th:if="${bloodPressureRisk == '高血压风险'}">
+                    <strong>高血压特别推荐：</strong><br>
+                    - <strong>谷薯类：</strong>每天吃250g糙米饭 + 50g红薯，避免精白米面<br>
+                    - <strong>蔬菜：</strong>每天200g菠菜 + 150g西兰花，烹饪时不加额外盐<br>
+                    - <strong>水果：</strong>每天200g苹果或橙子，补充钾元素<br>
+                    - <strong>饮品：</strong>每天1500ml温开水，分8-10次少量多次饮用
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI健康建议部分 -->
+    <!-- AI健康建议部分 -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5><i class="fas fa-robot me-2"></i>基于您健康数据的AI分析建议</h5>
+        </div>
+        <div class="card-body">
+            <div th:if="${aiSuggestions?.hasInsufficientData}" class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <strong>数据不足提醒：</strong>您的健康档案信息不完整，建议完善以下信息以获取更准确的饮食建议：
+                <ul class="mt-2">
+                    <li>身高、体重（用于计算BMI）</li>
+                    <li>近期血压测量值</li>
+                    <li>其他健康指标（血糖、血脂等）</li>
+                </ul>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <div class="card bg-light">
+                        <div class="card-body text-center">
+                            <i class="fas fa-heartbeat fa-2x text-primary mb-2"></i>
+                            <h6>整体健康评估</h6>
+                            <h4 th:text="${aiSuggestions?.overallHealth?:'待评估'}"
+                                th:class="${(aiSuggestions?.overallHealth == '良好') ? 'text-success' : (aiSuggestions?.overallHealth == '一般') ? 'text-warning' : (aiSuggestions?.overallHealth == '需改善') ? 'text-danger' : 'text-secondary'}">
+                                待评估
+                            </h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-light">
+                        <div class="card-body text-center">
+                            <i class="fas fa-weight fa-2x text-info mb-2"></i>
+                            <h6>BMI分类</h6>
+                            <h4 th:text="${aiSuggestions?.bmiCategory?:'未计算'}"
+                                th:class="${(aiSuggestions?.bmiCategory == '正常') ? 'text-success' : (aiSuggestions?.bmiCategory == '偏瘦') ? 'text-info' : (aiSuggestions?.bmiCategory == '超重') ? 'text-warning' : (aiSuggestions?.bmiCategory == '肥胖') ? 'text-danger' : 'text-secondary'}">
+                                未计算
+                            </h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-light">
+                        <div class="card-body text-center">
+                            <i class="fas fa-tachometer-alt fa-2x text-danger mb-2"></i>
+                            <h6>血压状态</h6>
+                            <h4 th:text="${bloodPressureRisk?:'未测量'}"
+                                th:class="${(bloodPressureRisk == '正常') ? 'text-success' : (bloodPressureRisk == '高血压风险') ? 'text-danger' : 'text-secondary'}">
+                                未测量
+                            </h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-md-8">
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            <h6><i class="fas fa-bullseye me-2"></i>重点改善领域</h6>
+                            <div th:if="${aiSuggestions?.priorityAreas}" class="d-flex flex-wrap gap-2">
+                            <span th:each="area : ${aiSuggestions.priorityAreas}"
+                                  class="badge bg-info">[[${area}]]</span>
+                            </div>
+                            <div th:unless="${aiSuggestions?.priorityAreas}" class="text-muted">
+                                无特殊重点（保持健康生活习惯）
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            <h6><i class="fas fa-lightbulb me-2"></i>个性化提示</h6>
+                            <div th:if="${personalizedNutrition?.personalizedTips}" class="small">
+                                <div th:each="tip : ${personalizedNutrition.personalizedTips}"
+                                     class="text-primary mb-1">
+                                    <i class="fas fa-info-circle me-1"></i> [[${tip}]]
+                                </div>
+                            </div>
+                            <div th:unless="${personalizedNutrition?.personalizedTips}" class="text-muted small">
+                                基于您的健康数据，建议保持均衡饮食
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-3">
+                <h6><i class="fas fa-lightbulb me-2"></i>具体建议</h6>
+                <div class="list-group">
+                    <div th:each="rec,iter : ${aiSuggestions?.specificRecommendations}"
+                         th:class="${iter.index < 3} ? 'list-group-item' : 'list-group-item d-none'"
+                         class="list-group-item">
+                        <i class="fas fa-check-circle text-success me-2"></i>
+                        <span th:text="${rec}">建议内容</span>
+                    </div>
+                    <div th:if="${aiSuggestions?.specificRecommendations?.size() > 3}">
+                        <button class="btn btn-link text-decoration-none"
+                                onclick="toggleAllSuggestions()">
+                            显示全部建议 <i class="fas fa-chevron-down"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 基于AI建议的饮食金字塔 -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5><i class="fas fa-utensils me-2"></i>基于AI建议的饮食金字塔</h5>
+        </div>
+        <div class="card-body">
+            <div th:if="${personalizedNutrition?.pyramidData}">
+                <div class="pyramid-container">
+                    <!-- 金字塔轮廓 -->
+                    <div class="pyramid-outline"></div>
+
+                    <!-- 动态生成金字塔层级 - 修改顺序和内容 -->
+                    <!-- 第6层：谷薯类（底层） -->
+                    <div class="pyramid-layer layer-6" style="background: var(--level-6);" data-layer="6">
+                        <div class="layer-content">
+                            <div class="layer-title">谷薯类</div>
+                            <div class="layer-desc">主食基础</div>
+                            <div class="layer-amount">每天300-450g</div>
+                        </div>
+                    </div>
+
+                    <!-- 第5层：蔬菜水果 -->
+                    <div class="pyramid-layer layer-5" style="background: var(--level-5);" data-layer="5">
+                        <div class="layer-content">
+                            <div class="layer-title">蔬菜水果</div>
+                            <div class="layer-desc">维生素与纤维</div>
+                            <div class="layer-amount">蔬菜300-500g，水果200-350g</div>
+                        </div>
+                    </div>
+
+                    <!-- 第4层：动物性食物 -->
+                    <div class="pyramid-layer layer-4" style="background: var(--level-4);" data-layer="4">
+                        <div class="layer-content">
+                            <div class="layer-title">动物性食物</div>
+                            <div class="layer-desc">蛋白质来源</div>
+                            <div class="layer-amount">每天150-220g</div>
+                        </div>
+                    </div>
+
+                    <!-- 第3层：奶豆坚果 -->
+                    <div class="pyramid-layer layer-3" style="background: var(--level-3);" data-layer="3">
+                        <div class="layer-content">
+                            <div class="layer-title">奶豆坚果</div>
+                            <div class="layer-desc">钙质与健康脂肪</div>
+                            <div class="layer-amount">奶350g，豆30g，坚果15g</div>
+                        </div>
+                    </div>
+
+                    <!-- 第2层：油 -->
+                    <div class="pyramid-layer layer-2" style="background: var(--level-2);" data-layer="2">
+                        <div class="layer-content">
+                            <div class="layer-title">油</div>
+                            <div class="layer-desc">烹饪用油</div>
+                            <div class="layer-amount">每天20-25g</div>
+                        </div>
+                    </div>
+
+                    <!-- 第1层：盐（顶层） -->
+                    <div class="pyramid-layer layer-1" style="background: var(--level-1);" data-layer="1">
+                        <div class="layer-content">
+                            <div class="layer-title">盐</div>
+                            <div class="layer-desc">调味品</div>
+                            <div class="layer-amount">每天&lt;5g</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 金字塔标签 -->
+                <div class="pyramid-labels">
+                    <!-- 标签1：盐 -->
+                    <div class="pyramid-label" onclick="highlightLayer(1)">
+                        <div class="label-number">1</div>
+                        <div class="label-text">盐</div>
+                        <div class="label-desc">每天&lt;5g</div>
+                    </div>
+
+                    <!-- 标签2：油 -->
+                    <div class="pyramid-label" onclick="highlightLayer(2)">
+                        <div class="label-number">2</div>
+                        <div class="label-text">油</div>
+                        <div class="label-desc">每天20-25g</div>
+                    </div>
+
+                    <!-- 标签3：奶豆坚果 -->
+                    <div class="pyramid-label" onclick="highlightLayer(3)">
+                        <div class="label-number">3</div>
+                        <div class="label-text">奶豆坚果</div>
+                        <div class="label-desc">奶350g，豆30g，坚果15g</div>
+                    </div>
+
+                    <!-- 标签4：动物性食物 -->
+                    <div class="pyramid-label" onclick="highlightLayer(4)">
+                        <div class="label-number">4</div>
+                        <div class="label-text">动物性食物</div>
+                        <div class="label-desc">每天150-220g</div>
+                    </div>
+
+                    <!-- 标签5：蔬菜水果 -->
+                    <div class="pyramid-label" onclick="highlightLayer(5)">
+                        <div class="label-number">5</div>
+                        <div class="label-text">蔬菜水果</div>
+                        <div class="label-desc">蔬菜300-500g，水果200-350g</div>
+                    </div>
+
+                    <!-- 标签6：谷薯类 -->
+                    <div class="pyramid-label" onclick="highlightLayer(6)">
+                        <div class="label-number">6</div>
+                        <div class="label-text">谷薯类</div>
+                        <div class="label-desc">每天300-450g</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 个性化餐单 -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5><i class="fas fa-calendar-alt me-2"></i>个性化餐单推荐</h5>
+        </div>
+        <div class="card-body">
+            <div th:if="${personalizedNutrition?.mealPlan}">
+                <div class="row">
+                    <div th:each="meal : ${personalizedNutrition.mealPlan}" class="col-md-6 mb-3">
+                        <div class="card h-100">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0" th:text="${meal.key}">餐次</h6>
+                            </div>
+                            <div class="card-body">
+                                <p class="card-text" th:text="${meal.value}">餐单内容</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 禁忌食物 -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5><i class="fas fa-ban me-2"></i>需避免的食物</h5>
+        </div>
+        <div class="card-body">
+            <div th:if="${personalizedNutrition?.foodsToAvoid}">
+                <div class="row">
+                    <div th:each="food,iter : ${personalizedNutrition.foodsToAvoid}"
+                         th:class="${iter.index < 5} ? 'col-md-6' : 'col-md-6 d-none'">
+                        <div class="alert alert-light d-flex align-items-center">
+                            <i class="fas fa-exclamation-triangle text-danger me-3"></i>
+                            <span th:text="${food}">禁忌食物</span>
+                        </div>
+                    </div>
+                </div>
+                <div th:if="${personalizedNutrition.foodsToAvoid.size() > 5}">
+                    <button class="btn btn-outline-danger btn-sm"
+                            onclick="toggleAllFoods()">
+                        查看全部禁忌食物
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 饮水建议 -->
+    <div class="water-section">
+        <div class="water-icon">
+            <i class="fas fa-tint"></i>
+        </div>
+        <div class="water-amount" th:text="${personalizedNutrition?.waterAdvice ?: '每天1500-1700ml'}">
+            每天1500-1700ml
+        </div>
+        <div class="water-desc">
+            基于AI健康建议的每日饮水推荐量，分多次饮用
+        </div>
+    </div>
+
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 金字塔层级的交互效果
+        const pyramidLayers = document.querySelectorAll('.pyramid-layer');
+
+        pyramidLayers.forEach(layer => {
+            const layerNum = layer.dataset.layer;
+
+            layer.addEventListener('mouseenter', function() {
+                if (!this.classList.contains('active')) {
+                    this.style.zIndex = '20';
+                }
+            });
+
+            layer.addEventListener('mouseleave', function() {
+                if (!this.classList.contains('active')) {
+                    this.style.zIndex = layerNum.toString();
+                }
+            });
+
+            layer.addEventListener('click', function(e) {
+                e.stopPropagation();
+
+                const layerNum = this.dataset.layer;
+                const layerName = this.querySelector('.layer-title').textContent;
+                const layerAmount = this.querySelector('.layer-amount').textContent;
+
+                // 移除其他层级的active状态
+                pyramidLayers.forEach(l => {
+                    l.classList.remove('active');
+                    l.style.animation = '';
+                    l.style.zIndex = parseInt(l.dataset.layer).toString();
+                });
+
+                // 为点击的层级添加active状态和动画
+                this.classList.add('active');
+                this.style.animation = 'layerPulse 1s ease-in-out';
+                this.style.zIndex = '100';
+
+                // 显示详细信息
+                showLayerDetails(layerNum, layerName, layerAmount);
+
+                // 动画结束后恢复持续脉冲效果
+                setTimeout(() => {
+                    if (this.classList.contains('active')) {
+                        this.style.animation = 'layerPulse 2s ease-in-out infinite';
+                    }
+                }, 1000);
+            });
+        });
+
+        // 标签点击事件
+        function highlightLayer(layerNum) {
+            const layer = document.querySelector(`.layer-${layerNum}`);
+            if (layer) {
+                layer.click();
+
+                // 滚动到金字塔
+                document.querySelector('.pyramid-container').scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center'
+                });
+            }
+        }
+
+        // 显示层级详细信息
+        function showLayerDetails(layerNum, layerName, layerAmount) {
+            // 创建或更新详情提示
+            let detailTip = document.getElementById('layer-detail-tip');
+            if (!detailTip) {
+                detailTip = document.createElement('div');
+                detailTip.id = 'layer-detail-tip';
+                detailTip.style.cssText = `
+                    position: fixed;
+                    top: 100px;
+                    right: 20px;
+                    background: white;
+                    padding: 20px;
+                    border-radius: 12px;
+                    box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+                    z-index: 1000;
+                    max-width: 320px;
+                    animation: slideInRight 0.3s ease-out;
+                    border-top: 4px solid;
+                    font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+                `;
+                document.body.appendChild(detailTip);
+            }
+
+            // 根据层级设置颜色
+            const colors = {
+                1: '#FF6B6B',
+                2: '#FFD166',
+                3: '#06D6A0',
+                4: '#118AB2',
+                5: '#9D4EDD',
+                6: '#FF9E6D'
+            };
+
+            // 层级详细描述
+            const descriptions = {
+                1: '盐是烹饪中不可或缺的调味品，但过量摄入会增加高血压、心血管疾病的风险。建议每日摄入量控制在5克以内，可使用香料、柠檬汁等替代品增加风味。',
+                2: '食用油提供必需脂肪酸和能量，建议选择植物油如橄榄油、菜籽油等，避免动物油和反式脂肪。烹饪时尽量采用蒸、煮、炖等健康方式。',
+                3: '奶制品富含钙质，豆类提供优质植物蛋白，坚果含有健康脂肪。建议选择低脂奶制品，适量摄入坚果，多样化选择豆制品。',
+                4: '动物性食物是优质蛋白质的重要来源，建议优先选择鱼、禽肉，适量摄入红肉。烹饪时尽量去除可见脂肪，采用健康的烹饪方法。',
+                5: '蔬菜水果富含维生素、矿物质和膳食纤维，建议每天摄入多种颜色的蔬果，深色蔬菜应占一半以上，水果选择应季、新鲜品种。',
+                6: '谷薯类食物是能量的主要来源，建议以全谷物、杂豆类为主，增加膳食纤维摄入，控制精制谷物和加工食品的摄入。'
+            };
+
+            // 健康建议
+            const healthTips = {
+                1: '特别注意：高血压患者应将食盐摄入量进一步控制在3-4克/天',
+                2: '健康提示：不同油类交替使用，避免长期单一油种',
+                3: '营养建议：每天一杯奶，一把坚果，适量豆制品',
+                4: '烹饪建议：优先清蒸、水煮、烤制，减少油炸',
+                5: '摄入建议：餐餐有蔬菜，天天有水果',
+                6: '主食建议：粗细搭配，全谷物占主食的1/3-1/2'
+            };
+
+            detailTip.style.borderTopColor = colors[layerNum];
+            detailTip.innerHTML = `
+                <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                    <div style="width: 12px; height: 12px; border-radius: 50%; background: ${colors[layerNum]}; margin-right: 8px;"></div>
+                    <h6 style="margin: 0; color: ${colors[layerNum]}">${layerName}</h6>
+                </div>
+                <div style="font-weight: 700; font-size: 16px; color: #333; margin-bottom: 10px;">${layerAmount}</div>
+                <div style="font-size: 14px; color: #555; line-height: 1.6; margin-bottom: 15px;">${descriptions[layerNum]}</div>
+                <div style="background: #f8f9fa; padding: 10px; border-radius: 6px; border-left: 3px solid ${colors[layerNum]};">
+                    <div style="font-size: 12px; color: #666; font-weight: 600;">${healthTips[layerNum]}</div>
+                </div>
+                <button onclick="closeDetailTip()" style="margin-top: 15px; padding: 6px 16px; background: ${colors[layerNum]}; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; float: right;">关闭</button>
+                <div style="clear: both;"></div>
+            `;
+
+            // 添加动画样式
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes slideInRight {
+                    from { opacity: 0; transform: translateX(30px); }
+                    to { opacity: 1; transform: translateX(0); }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        // 关闭详情提示
+        window.closeDetailTip = function() {
+            const detailTip = document.getElementById('layer-detail-tip');
+            if (detailTip) {
+                detailTip.style.animation = 'slideInRight 0.3s ease-out reverse';
+                setTimeout(() => {
+                    if (detailTip.parentNode) {
+                        detailTip.parentNode.removeChild(detailTip);
+                    }
+                }, 300);
+            }
+
+            // 清除所有active状态
+            pyramidLayers.forEach(layer => {
+                layer.classList.remove('active');
+                layer.style.animation = '';
+                layer.style.zIndex = layer.dataset.layer;
+            });
+        };
+
+        // 金字塔标签点击事件
+        document.querySelectorAll('.pyramid-label').forEach(label => {
+            label.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const layerNum = this.getAttribute('onclick').match(/highlightLayer\((\d+)\)/)[1];
+                highlightLayer(layerNum);
+            });
+        });
+
+        // 点击页面其他地方关闭详情提示
+        document.addEventListener('click', function(e) {
+            const detailTip = document.getElementById('layer-detail-tip');
+            if (detailTip && !detailTip.contains(e.target) && !e.target.closest('.pyramid-layer') && !e.target.closest('.pyramid-label')) {
+                closeDetailTip();
+            }
+        });
+
+        // 键盘快捷键支持
+        document.addEventListener('keydown', function(e) {
+            const layerNum = parseInt(e.key);
+            if (layerNum >= 1 && layerNum <= 6) {
+                highlightLayer(layerNum);
+            } else if (e.key === 'Escape') {
+                closeDetailTip();
+            }
+        });
+    });
+
+    // 显示/隐藏所有建议
+    function toggleAllSuggestions() {
+        const hiddenItems = document.querySelectorAll('.list-group-item.d-none');
+        const btn = event.target.closest('button');
+
+        if (hiddenItems.length > 0) {
+            hiddenItems.forEach(item => item.classList.remove('d-none'));
+            btn.innerHTML = '收起建议 <i class="fas fa-chevron-up"></i>';
+            btn.onclick = function() {
+                const allItems = document.querySelectorAll('.list-group-item');
+                allItems.forEach((item, index) => {
+                    if (index > 2) item.classList.add('d-none');
+                });
+                btn.innerHTML = '显示全部建议 <i class="fas fa-chevron-down"></i>';
+                btn.onclick = toggleAllSuggestions;
+            };
+        }
+    }
+
+    // 显示/隐藏所有禁忌食物
+    function toggleAllFoods() {
+        const hiddenFoods = document.querySelectorAll('.col-md-6.d-none');
+        const btn = event.target;
+
+        if (hiddenFoods.length > 0) {
+            hiddenFoods.forEach(food => food.classList.remove('d-none'));
+            btn.innerHTML = '收起禁忌食物';
+            btn.classList.add('active');
+            btn.onclick = function() {
+                const allFoods = document.querySelectorAll('.col-md-6');
+                allFoods.forEach((food, index) => {
+                    if (index > 4) food.classList.add('d-none');
+                });
+                btn.innerHTML = '查看全部禁忌食物';
+                btn.classList.remove('active');
+                btn.onclick = toggleAllFoods;
+            };
+        }
+    }
+
+    // 刷新AI建议
+    function refreshAISuggestions() {
+        if (confirm('是否要重新生成AI健康建议？')) {
+            // 这里可以添加AJAX调用重新生成建议的逻辑
+            location.reload();
+        }
+    }
+
+    // 在页面加载完成后添加按钮
+    document.addEventListener('DOMContentLoaded', function() {
+        // 在AI建议卡片标题旁添加刷新按钮
+        const aiCardHeader = document.querySelector('.card-header h5 .fa-robot').closest('h5');
+        if (aiCardHeader) {
+            const refreshBtn = document.createElement('button');
+            refreshBtn.className = 'btn btn-sm btn-outline-primary float-end';
+            refreshBtn.innerHTML = '<i class="fas fa-sync-alt me-1"></i>刷新建议';
+            refreshBtn.onclick = refreshAISuggestions;
+            aiCardHeader.appendChild(refreshBtn);
+        }
+
+        // 添加打印饮食计划功能
+        const printBtn = document.createElement('button');
+        printBtn.className = 'btn btn-success mt-3';
+        printBtn.innerHTML = '<i class="fas fa-print me-2"></i>打印饮食计划';
+        printBtn.onclick = function() {
+            window.print();
+        };
+        document.querySelector('.main-content').appendChild(printBtn);
+    });
+</script>
+</body>
+</html>

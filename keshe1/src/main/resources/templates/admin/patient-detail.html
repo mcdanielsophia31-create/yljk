@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>患者详情</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .patient-card {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .info-item {
+            margin-bottom: 10px;
+        }
+        .info-label {
+            font-weight: bold;
+            color: #495057;
+        }
+        .info-value {
+            color: #6c757d;
+        }
+        .back-btn {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+<div class="container-fluid">
+    <div class="back-btn">
+        <a href="/admin/patients" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> 返回患者列表
+        </a>
+    </div>
+
+    <!-- 患者基本信息卡片 -->
+    <div class="patient-card">
+        <h3><i class="fas fa-user-injured me-2"></i>患者基本信息</h3>
+        <hr>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="info-item">
+                    <span class="info-label">姓名：</span>
+                    <span class="info-value" th:text="${patient.name != null ? patient.name : (patient.user != null ? patient.user.realName : '未设置')}">张三</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">性别：</span>
+                    <span class="info-value" th:text="${patient.gender != null ? patient.gender : '未设置'}">男</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">身份证号：</span>
+                    <span class="info-value" th:text="${patient.idCard != null ? patient.idCard : '未设置'}">110101199001011234</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">注册时间：</span>
+                    <span class="info-value" th:text="${patient.createdTime != null ? #temporals.format(patient.createdTime, 'yyyy-MM-dd HH:mm:ss') : '未设置'}">2023-01-01 10:00:00</span>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="info-item">
+                    <span class="info-label">电话：</span>
+                    <span class="info-value" th:text="${patient.phone != null ? patient.phone : (patient.user != null ? patient.user.phone : '未设置')}">13800138000</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">邮箱：</span>
+                    <span class="info-value" th:text="${patient.email != null ? patient.email : (patient.user != null ? patient.user.email : '未设置')}">zhangsan@example.com</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">地址：</span>
+                    <span class="info-value" th:text="${patient.address != null ? patient.address : '未设置'}">北京市朝阳区某某街道</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">更新时间：</span>
+                    <span class="info-value" th:text="${patient.updatedTime != null ? #temporals.format(patient.updatedTime, 'yyyy-MM-dd HH:mm:ss') : '未设置'}">2023-01-01 10:00:00</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 就诊历史 -->
+    <div class="section-card">
+        <h4><i class="fas fa-file-medical me-2"></i>病历记录</h4>
+        <hr>
+        <div th:if="${medicalRecords != null and !medicalRecords.isEmpty()}">
+            <div class="record-item" th:each="record : ${medicalRecords}">
+                <div class="row">
+                    <div class="col-md-3">
+                        <strong>就诊日期：</strong>
+                        <span th:text="${record.visitDate != null ? #temporals.format(record.visitDate, 'yyyy-MM-dd') : '未设置'}">2023-12-20</span>
+                    </div>
+                    <div class="col-md-3">
+                        <strong>主治医生：</strong>
+                        <span th:if="${record.doctorId != null}" th:text="${#strings.defaultIfEmpty(doctorService.getById(record.doctorId)?.user?.realName, '未知')}">张医生</span>
+                        <span th:unless="${record.doctorId != null}">未知</span>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>诊断：</strong>
+                        <span th:text="${record.diagnosis != null ? record.diagnosis : '未设置'}">高血压</span>
+                    </div>
+                </div>
+                <div class="mt-2">
+                    <strong>主诉：</strong>
+                    <span th:text="${record.chiefComplaint != null ? record.chiefComplaint : '无'}">胸闷气短</span>
+                </div>
+            </div>
+        </div>
+        <div th:if="${medicalRecords == null or medicalRecords.isEmpty()}">
+            <p class="text-muted">暂无病历记录</p>
+        </div>
+    </div>
+
+    <!-- 诊断记录 -->
+    <div class="section-card">
+        <h4><i class="fas fa-stethoscope me-2"></i>诊断记录</h4>
+        <hr>
+        <div th:if="${diagnoses != null and !diagnoses.isEmpty()}">
+            <div class="record-item" th:each="diagnosis : ${diagnoses}">
+                <div class="row">
+                    <div class="col-md-3">
+                        <strong>诊断日期：</strong>
+                        <span th:text="${diagnosis.diagnosisDate != null ? #temporals.format(diagnosis.diagnosisDate, 'yyyy-MM-dd') : '未设置'}">2023-12-20</span>
+                    </div>
+                    <div class="col-md-3">
+                        <strong>诊断类型：</strong>
+                        <span th:text="${diagnosis.diagnosisType != null ? diagnosis.diagnosisType : '未设置'}">临床诊断</span>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>诊断名称：</strong>
+                        <span th:text="${diagnosis.diagnosisName != null ? diagnosis.diagnosisName : '未设置'}">高血压</span>
+                    </div>
+                </div>
+                <div class="mt-2" th:if="${diagnosis.description != null}">
+                    <strong>描述：</strong>
+                    <span th:text="${diagnosis.description}">原发性高血压，轻度</span>
+                </div>
+            </div>
+        </div>
+        <div th:if="${diagnoses == null or diagnoses.isEmpty()}">
+            <p class="text-muted">暂无诊断记录</p>
+        </div>
+    </div>
+
+    <!-- 检查报告 -->
+    <div class="section-card">
+        <h4><i class="fas fa-x-ray me-2"></i>检查报告</h4>
+        <hr>
+        <div th:if="${examinations != null and !examinations.isEmpty()}">
+            <div class="record-item" th:each="examination : ${examinations}">
+                <div class="row">
+                    <div class="col-md-3">
+                        <strong>检查日期：</strong>
+                        <span th:text="${examination.examinationDate != null ? #temporals.format(examination.examinationDate, 'yyyy-MM-dd') : '未设置'}">2023-12-20</span>
+                    </div>
+                    <div class="col-md-3">
+                        <strong>检查类型：</strong>
+                        <span th:text="${examination.examinationType != null ? examination.examinationType : '未设置'}">血液检查</span>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>检查项目：</strong>
+                        <span th:text="${examination.examinationItem != null ? examination.examinationItem : '未设置'}">血常规</span>
+                    </div>
+                </div>
+                <div class="mt-2" th:if="${examination.examinationResult != null}">
+                    <strong>检查结果：</strong>
+                    <span th:text="${examination.examinationResult}">白细胞计数略高</span>
+                </div>
+            </div>
+        </div>
+        <div th:if="${examinations == null or examinations.isEmpty()}">
+            <p class="text-muted">暂无检查报告</p>
+        </div>
+    </div>
+
+    <!-- 用药记录 -->
+    <div class="section-card">
+        <h4><i class="fas fa-pills me-2"></i>用药记录</h4>
+        <hr>
+        <div th:if="${medications != null and !medications.isEmpty()}">
+            <div class="record-item" th:each="medication : ${medications}">
+                <div class="row">
+                    <div class="col-md-3">
+                        <strong>开药日期：</strong>
+                        <span th:text="${medication.prescriptionDate != null ? #temporals.format(medication.prescriptionDate, 'yyyy-MM-dd') : '未设置'}">2023-12-20</span>
+                    </div>
+                    <div class="col-md-3">
+                        <strong>药品名称：</strong>
+                        <span th:text="${medication.medicationName != null ? medication.medicationName : '未设置'}">氨氯地平片</span>
+                    </div>
+                    <div class="col-md-3">
+                        <strong>状态：</strong>
+                        <span th:text="${medication.status != null ? medication.status : '未设置'}">用药中</span>
+                    </div>
+                    <div class="col-md-3">
+                        <strong>用法用量：</strong>
+                        <span th:text="${medication.dosage != null ? medication.dosage : '未设置'}">5mg，每日一次</span>
+                    </div>
+                </div>
+                <div class="mt-2" th:if="${medication.instructions != null}">
+                    <strong>用药说明：</strong>
+                    <span th:text="${medication.instructions}">餐前服用</span>
+                </div>
+            </div>
+        </div>
+        <div th:if="${medications == null or medications.isEmpty()}">
+            <p class="text-muted">暂无用药记录</p>
+        </div>
+    </div>
+
+    <!-- 预约记录 -->
+    <div class="section-card">
+        <h4><i class="fas fa-calendar-check me-2"></i>预约记录</h4>
+        <hr>
+        <div th:if="${appointments != null and !appointments.isEmpty()}">
+            <div class="record-item" th:each="appointment : ${appointments}">
+                <div class="row">
+                    <div class="col-md-3">
+                        <strong>预约日期：</strong>
+                        <span th:text="${appointment.appointmentDate != null ? #temporals.format(appointment.appointmentDate, 'yyyy-MM-dd') : '未设置'}">2023-12-25</span>
+                    </div>
+                    <div class="col-md-2">
+                        <strong>时间段：</strong>
+                        <span th:text="${appointment.timeSlot != null ? appointment.timeSlot : '未设置'}">上午</span>
+                    </div>
+                    <div class="col-md-3">
+                        <strong>状态：</strong>
+                        <span th:text="${appointment.status != null ? appointment.status : '未设置'}">已确认</span>
+                    </div>
+                    <div class="col-md-4">
+                        <strong>就诊原因：</strong>
+                        <span th:text="${appointment.reason != null ? appointment.reason : '未设置'}">胸闷气短</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div th:if="${appointments == null or appointments.isEmpty()}">
+            <p class="text-muted">暂无预约记录</p>
+        </div>
+    </div>
+</div>
+</body>
+</html>

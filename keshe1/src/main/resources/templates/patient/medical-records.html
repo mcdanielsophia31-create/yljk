@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>电子病历 - 医疗健康管理系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" th:href="@{/css/unified-style.css}">
+    <style>
+        /* 参考"我的预约"样式，优化表格 */
+        .table thead th {
+            background-color: #f8f9fa;
+            font-weight: 500;
+            border-bottom: 2px solid #dee2e6;
+        }
+        .table tbody tr {
+            transition: background-color 0.2s ease;
+        }
+        .table tbody tr:hover {
+            background-color: #f5f7fa;
+        }
+        /* 状态标签（参考预约界面的"已取消/待确认"样式） */
+        .status-tag {
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        .status-tag.primary {
+            background-color: #e3f2fd;
+            color: #1976d2;
+        }
+        .status-tag.success {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+        .status-tag.danger {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+        /* 操作按钮对齐优化 */
+        .action-btn-group {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+        /* 费用样式 */
+        .price-cell {
+            font-weight: 600;
+            color: #dc3545;
+        }
+        .price-cell.zero {
+            color: #6c757d;
+            font-weight: normal;
+        }
+    </style>
+</head>
+<body>
+<!-- 页面标题 -->
+<div class="page-header d-flex justify-content-between align-items-center">
+    <div>
+        <h4><i class="fas fa-file-medical me-2"></i>电子病历</h4>
+        <p class="mb-0 text-muted">查看您的电子病历记录</p>
+    </div>
+    <span class="text-muted">管理您的病历记录</span>
+</div>
+
+<!-- 电子病历列表卡片 -->
+<div class="card shadow-sm border-0">
+    <div class="card-header d-flex justify-content-between align-items-center bg-white">
+        <h5 class="mb-0"><i class="fas fa-list me-2"></i>病历列表</h5>
+        <span class="badge bg-primary-custom" th:text="'共 ' + ${medicalRecords.size()} + ' 条记录'"></span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table mb-0">
+                <thead>
+                <tr>
+                    <th>就诊日期</th>
+                    <th>就诊科室</th>
+                    <th>主治医生</th>
+                    <th>诊断结果</th>
+                    <th>治疗方案</th>
+                    <th>总费用</th>
+                    <th>操作</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:if="${medicalRecords == null or #lists.isEmpty(medicalRecords)}">
+                    <td colspan="7" class="text-center text-muted py-3">暂无电子病历记录</td>
+                </tr>
+                <tr th:each="record : ${medicalRecords}" th:attr="data-record-id=${record.get('id')}" class="border-top">
+                    <!-- 所有HashMap属性都用get(key)访问 -->
+                    <td th:text="${#temporals.format(record.get('visitDate'), 'yyyy-MM-dd')}" class="py-3">2024-12-01</td>
+                    <td th:text="${record.get('departmentName')}" class="py-3">内科</td>
+                    <td th:text="${record.get('doctorName')}" class="py-3">李医生</td>
+                    <td class="py-3">
+                        <span th:text="${record.get('diagnosis')}"
+                              th:title="${record.get('diagnosis')}"
+                              style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block;"
+                              th:if="${record.get('diagnosis') != null and record.get('diagnosis').length() > 25}">
+                            <span th:text="${record.get('diagnosis').substring(0, 25) + '...'}"></span>
+                        </span>
+                        <span th:text="${record.get('diagnosis')}" th:unless="${record.get('diagnosis') != null and record.get('diagnosis').length() > 25}">
+                            <span th:if="${record.get('diagnosis') == null or record.get('diagnosis').trim() == ''}" class="text-muted">暂无诊断</span>
+                        </span>
+                    </td>
+                    <!-- 治疗方案列 -->
+                    <td class="py-3">
+                        <span th:text="${record.get('treatmentPlan')}"
+                              th:title="${record.get('treatmentPlan')}"
+                              style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block;"
+                              th:if="${record.get('treatmentPlan') != null and record.get('treatmentPlan').length() > 25}">
+                            <span th:text="${record.get('treatmentPlan').substring(0, 25) + '...'}"></span>
+                        </span>
+                        <span th:text="${record.get('treatmentPlan')}" th:unless="${record.get('treatmentPlan') != null and record.get('treatmentPlan').length() > 25}">
+                            <span th:if="${record.get('treatmentPlan') == null or record.get('treatmentPlan').trim() == ''}" class="text-muted">暂无方案</span>
+                        </span>
+                    </td>
+                    <!-- 总费用列 - 修复：使用totalPriceValue进行数值比较 -->
+                    <td class="py-3">
+                        <span th:if="${record.get('totalPriceValue') != null and record.get('totalPriceValue') > 0}"
+                              th:class="'price-cell'"
+                              th:text="${record.get('totalPrice')}">
+                        </span>
+                        <span th:if="${record.get('totalPriceValue') == null or record.get('totalPriceValue') == 0}"
+                              th:class="'price-cell zero'"
+                              class="text-muted">¥0.00</span>
+                    </td>
+                    <td class="py-3">
+                        <div class="action-btn-group">
+                            <!-- 查看详情按钮（参考预约界面的蓝色小图标） -->
+                            <button class="btn btn-sm btn-outline-info rounded-circle p-1"
+                                    th:attr="data-action=view-record,data-id=${record.get('id')}"
+                                    title="查看详情"
+                                    style="width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;">
+                                <i class="fas fa-eye fa-xs"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 电子病历详情弹窗（已添加总费用显示） -->
+<div class="modal fade" id="medicalRecordModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-file-medical me-2"></i>
+                    <span id="modalRecordId">电子病历详情</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- 基本信息 -->
+                <div class="card mb-3 border-0 shadow-sm">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>基本信息</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-2">
+                                <strong>病历号：</strong><span id="detailRecordId">-</span>
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <strong>就诊日期：</strong><span id="detailVisitDate">-</span>
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <strong>就诊科室：</strong><span id="detailDepartment">-</span>
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <strong>主治医生：</strong><span id="detailDoctor">-</span>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 主诉和现病史 -->
+                <div class="card mb-3 border-0 shadow-sm">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0"><i class="fas fa-comment-medical me-2"></i>主诉与病史</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <strong>主诉：</strong>
+                            <div class="border rounded p-3 mt-1 bg-light" id="detailChiefComplaint">暂无数据</div>
+                        </div>
+                        <div class="mb-3">
+                            <strong>现病史：</strong>
+                            <div class="border rounded p-3 mt-1 bg-light" id="detailPresentIllness">暂无数据</div>
+                        </div>
+                        <div class="mb-3">
+                            <strong>既往史：</strong>
+                            <div class="border rounded p-3 mt-1 bg-light" id="detailPastIllness">暂无数据</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 检查信息 -->
+                <div class="card mb-3 border-0 shadow-sm">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0"><i class="fas fa-stethoscope me-2"></i>检查信息</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <strong>体格检查：</strong>
+                            <div class="border rounded p-3 mt-1 bg-light" id="detailPhysicalExamination">暂无数据</div>
+                        </div>
+                        <div class="mb-3">
+                            <strong>辅助检查：</strong>
+                            <div class="border rounded p-3 mt-1 bg-light" id="detailAuxiliaryExamination">暂无数据</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 诊断与治疗方案 -->
+                <div class="card mb-3 border-0 shadow-sm">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0"><i class="fas fa-clipboard-check me-2"></i>诊断与治疗</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <strong>诊断结果：</strong>
+                            <div class="border rounded p-3 mt-1 bg-light" id="detailDiagnosis">暂无数据</div>
+                        </div>
+                        <div class="mb-3">
+                            <strong>治疗方案：</strong>
+                            <div class="border rounded p-3 mt-1 bg-light" id="detailTreatmentPlan">暂无数据</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    document.addEventListener('DOMContentLoaded', function() {
+        function loadAllPrices() {
+            document.querySelectorAll('[data-record-id]').forEach(row => {
+                const recordId = row.getAttribute('data-record-id');
+                const priceCell = row.querySelector('.price-cell');
+                if (!priceCell) return;
+                priceCell.textContent = '加载中...';
+                priceCell.classList.remove('zero');
+                fetch('/patient/medical-records/' + recordId + '/price-detail')
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data && data.success) {
+                            const total = data.totalPrice || 0;
+                            priceCell.textContent = '¥' + total.toFixed(2);
+                            priceCell.classList.toggle('zero', total <= 0);
+                        } else {
+                            priceCell.textContent = '¥0.00';
+                            priceCell.classList.add('zero');
+                        }
+                    })
+                    .catch(err => {
+                        console.error('加载费用失败 recordId=' + recordId, err);
+                        priceCell.textContent = '¥0.00';
+                        priceCell.classList.add('zero');
+                    });
+            });
+        }
+        loadAllPrices();
+
+        const modal = document.getElementById('medicalRecordModal');
+        if (modal) {
+            modal.addEventListener('show.bs.modal', function(event) {
+                const button = event.relatedTarget;
+                if (button && button.getAttribute('data-action') === 'view-record') {
+                    const recordId = button.getAttribute('data-id');
+                    event.preventDefault();
+
+                    // 并行请求数据
+                    const recordPromise = fetch('/patient/medical-records/detail/' + recordId)
+                        .then(res => res.json())
+                        .then(detailData => {
+                            if (detailData?.success && detailData.record) {
+                                const r = detailData.record;
+                                document.getElementById('detailRecordId').textContent = r.id || '-';
+                                document.getElementById('detailVisitDate').textContent = r.visitDate || '-';
+                                document.getElementById('detailDepartment').textContent = r.departmentName || '-';
+                                document.getElementById('detailDoctor').textContent = r.doctorName || '-';
+                                document.getElementById('detailChiefComplaint').textContent = r.chiefComplaint || '暂无数据';
+                                document.getElementById('detailPresentIllness').textContent = r.presentIllness || '暂无数据';
+                                document.getElementById('detailPastIllness').textContent = r.pastIllness || '暂无数据';
+                                document.getElementById('detailPhysicalExamination').textContent = r.physicalExamination || '暂无数据';
+                                document.getElementById('detailAuxiliaryExamination').textContent = r.auxiliaryExamination || '暂无数据';
+                                document.getElementById('detailDiagnosis').textContent = r.diagnosis || '暂无数据';
+                                document.getElementById('detailTreatmentPlan').innerHTML = (r.treatmentPlan || '暂无数据').replace(/\n/g, '<br>');
+                            }
+                        });
+
+                    const pricePromise = fetch('/patient/medical-records/' + recordId + '/price-detail')
+                        .then(res => res.json())
+                        .then(priceData => {
+                            if (priceData?.success) {
+                                const reg = priceData.registrationFee || 0;
+                                const med = priceData.medicineFee || 0;
+                                const exam = priceData.examinationFee || 0;
+                                const total = priceData.totalPrice || 0;
+
+                                document.getElementById('detailRegistrationFee').textContent = '¥' + reg.toFixed(2);
+                                document.getElementById('detailMedicineFee').textContent = '¥' + med.toFixed(2);
+                                document.getElementById('detailExaminationFee').textContent = '¥' + exam.toFixed(2);
+                                document.getElementById('detailTotalPrice').textContent = '¥' + total.toFixed(2);
+                            } else {
+                                document.getElementById('detailRegistrationFee').textContent = '¥0.00';
+                                document.getElementById('detailMedicineFee').textContent = '¥0.00';
+                                document.getElementById('detailExaminationFee').textContent = '¥0.00';
+                                document.getElementById('detailTotalPrice').textContent = '¥0.00';
+                            }
+                        });
+
+                    // 全部加载完再显示弹窗
+                    Promise.all([recordPromise, pricePromise]).finally(() => {
+                        const bsModal = new bootstrap.Modal(modal);
+                        bsModal.show();
+                    });
+                }
+            });
+        }
+    });
+    /*]]>*/
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

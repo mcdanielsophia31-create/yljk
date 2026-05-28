@@ -1,0 +1,78 @@
+<!-- 编辑预约页面 - 纯内容片段 -->
+<div class="page-header">
+    <h4><i class="fas fa-edit me-2"></i>修改预约</h4>
+    <p>修改您的预约信息</p>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h5><i class="fas fa-form me-2"></i>预约信息编辑</h5>
+    </div>
+    <div class="card-body">
+        <!-- 提交结果提示 -->
+        <div th:if="${error != null}" class="alert alert-danger" role="alert">
+            <i class="fas fa-exclamation-circle me-2"></i>
+            [[${error}]]
+        </div>
+
+        <form th:action="@{/patient/appointments/edit/{id}(id=${appointment.id})}" method="post">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">预约日期 <span class="text-danger">*</span></label>
+                        <!-- 原日期输入框改为只读显示 -->
+                        <div class="alert alert-info mb-0 py-2" style="background-color: #e8f4fd; border-color: #b8e0f5;">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-calendar-check text-primary me-2"></i>
+                                <span><strong th:text="${#temporals.format(appointment.appointmentDate, 'yyyy-MM-dd')}">2025-12-23</strong></span>
+                                <span class="text-muted ms-2">（预约日期不可更改）</span>
+                            </div>
+                        </div>
+                        <!-- 隐藏字段，用于提交原日期 -->
+                        <input type="hidden" id="appointmentDate" name="appointmentDate"
+                               th:value="${#temporals.format(appointment.appointmentDate, 'yyyy-MM-dd')}">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">时间段 <span class="text-danger">*</span></label>
+                        <!-- 原时间段下拉框改为只读显示 -->
+                        <div class="alert alert-warning mb-0 py-2" style="background-color: #fff3cd; border-color: #ffe69c;">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-clock me-2" th:classappend="${appointment.timeSlot == '上午' ? 'text-success' : (appointment.timeSlot == '下午' ? 'text-warning' : 'text-info')}"></i>
+                                <span>
+                                    <strong th:text="${appointment.timeSlot}">上午</strong>
+                                    <span th:if="${appointment.timeSlot == '上午'}" class="text-muted ms-1">(08:00-12:00)</span>
+                                    <span th:if="${appointment.timeSlot == '下午'}" class="text-muted ms-1">(14:00-18:00)</span>
+                                    <span th:if="${appointment.timeSlot == '晚上'}" class="text-muted ms-1">(18:00-22:00)</span>
+                                </span>
+                                <span class="text-muted ms-2">（时间段不可更改）</span>
+                            </div>
+                        </div>
+                        <!-- 隐藏字段，用于提交原时间段 -->
+                        <input type="hidden" id="timeSlot" name="timeSlot" th:value="${appointment.timeSlot}">
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="reason" class="form-label">病症描述 <span class="text-danger">*</span></label>
+                <textarea class="form-control" id="reason" name="reason" rows="3" placeholder="请详细描述您的症状" required th:text="${appointment.reason}"></textarea>
+            </div>
+
+            <div class="mb-3">
+                <label for="pastIllness" class="form-label">既往病史</label>
+                <textarea class="form-control" id="pastIllness" name="pastIllness" rows="2" placeholder="如有既往病史请在此填写" th:text="${appointment.notes}"></textarea>
+            </div>
+
+            <div class="d-flex justify-content-between">
+                <button type="submit" class="btn btn-primary-custom">
+                    <i class="fas fa-save me-2"></i>保存修改
+                </button>
+                <button type="button" class="btn btn-outline-custom" onclick="loadAppointmentManagement(); return false;">
+                    <i class="fas fa-arrow-left me-2"></i>返回
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
